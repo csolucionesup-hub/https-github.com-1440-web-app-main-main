@@ -5,14 +5,35 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, objectives, addActivity, logActivityExecution, userSettings } = useAppStore();
+  const { activities, objectives, projects, goals, addActivity, logActivityExecution, userSettings } = useAppStore();
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
   const [newTitle, setNewTitle] = useState("");
   const [newMinutes, setNewMinutes] = useState(30);
+  const [goalId, setGoalId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [objectiveId, setObjectiveId] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const activeGoals = React.useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
+  
+  // Initialize goalId if empty and goals are available
+  React.useEffect(() => {
+    if (activeGoals.length > 0 && !goalId) {
+      setGoalId(activeGoals[0].id);
+    }
+  }, [activeGoals, goalId]);
+
+  const activeProjectsForGoal = React.useMemo(() => {
+    if (!goalId) return [];
+    return projects.filter(p => p.goalId === goalId && (p.status === 'active' || p.status === 'in_progress'));
+  }, [projects, goalId]);
+
+  const activeObjectivesForProject = React.useMemo(() => {
+    if (!projectId) return [];
+    return objectives.filter(o => o.projectId === projectId && (o.status === 'active' || o.status === 'in_progress'));
+  }, [objectives, projectId]);
 
   const availableForMetas = 1440 - sleepMinutes - routineMinutes;
   const remainingMinutes = availableForMetas - plannedMinutes;
@@ -42,6 +63,8 @@ export default function ActivitiesView() {
     if (success) {
       setNewTitle("");
       setNewMinutes(30);
+      setGoalId("");
+      setProjectId("");
       setObjectiveId("");
     } else {
       setError("No tienes suficientes minutos libres (límite 1440 excedido)");
@@ -103,10 +126,14 @@ export default function ActivitiesView() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Vincular a Objetivo Estratégico</label>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>1. Meta Fundamental</label>
                   <select
-                    value={objectiveId}
-                    onChange={(e) => setObjectiveId(e.target.value)}
+                    value={goalId}
+                    onChange={(e) => {
+                      setGoalId(e.target.value);
+                      setProjectId("");
+                      setObjectiveId("");
+                    }}
                     style={{
                       width: "100%",
                       background: "rgba(255,255,255,0.03)",
@@ -117,9 +144,58 @@ export default function ActivitiesView() {
                       outline: "none",
                     }}
                   >
-                    <option value="">Selecciona un objetivo...</option>
-                    {objectives.map(obj => (
-                      <option key={obj.id} value={obj.id}>{obj.title}</option>
+                    <option value="" style={{ background: "#1E293B", color: "#94A3B8" }}>Selecciona una meta...</option>
+                    {activeGoals.map(g => (
+                      <option key={g.id} value={g.id} style={{ background: "#1E293B", color: "white" }}>{g.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>2. Proyecto Asociado</label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => {
+                      setProjectId(e.target.value);
+                      setObjectiveId("");
+                    }}
+                    disabled={!goalId}
+                    style={{
+                      width: "100%",
+                      background: goalId ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.01)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      color: goalId ? "white" : "#475569",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="" style={{ background: "#1E293B", color: "#94A3B8" }}>Selecciona un proyecto...</option>
+                    {activeProjectsForGoal.map(p => (
+                      <option key={p.id} value={p.id} style={{ background: "#1E293B", color: "white" }}>{p.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>3. Objetivo Táctico</label>
+                  <select
+                    value={objectiveId}
+                    onChange={(e) => setObjectiveId(e.target.value)}
+                    disabled={!projectId}
+                    style={{
+                      width: "100%",
+                      background: projectId ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.01)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      color: projectId ? "white" : "#475569",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="" style={{ background: "#1E293B", color: "#94A3B8" }}>Selecciona un objetivo...</option>
+                    {activeObjectivesForProject.map(obj => (
+                      <option key={obj.id} value={obj.id} style={{ background: "#1E293B", color: "white" }}>{obj.title}</option>
                     ))}
                   </select>
                 </div>

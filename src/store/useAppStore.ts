@@ -97,7 +97,7 @@ interface AppState {
 const MAX_ACTIVE_GOALS = 3;
 const MAX_TOTAL_GOALS = 6;
 const MAX_ACTIVE_PROJECTS_PER_GOAL = 3;
-const MAX_ACTIVE_OBJECTIVES = 6;
+const MAX_ACTIVE_OBJECTIVES_PER_PROJECT = 3;
 const MAX_ACTIVE_ACTIVITIES = 10;
 const MAX_ACTIVE_ACTION_PLANS = 15;
 
@@ -319,14 +319,16 @@ export const useAppStore = create<AppState>()(
       },
 
       addObjective: async (objective) => {
-        const active = get().objectives.filter((o) => o.status === "active").length;
+        const activeInProject = get().objectives.filter(
+          (o) => o.projectId === objective.projectId && (o.status === "active" || o.status === "in_progress")
+        ).length;
         const tempId = crypto.randomUUID();
         const newObjective: Objective = {
           ...objective,
           id: tempId,
           createdAt: new Date().toISOString(),
           order: get().objectives.filter(o => o.projectId === objective.projectId).length,
-          status: active < MAX_ACTIVE_OBJECTIVES ? "active" : "pending",
+          status: activeInProject < MAX_ACTIVE_OBJECTIVES_PER_PROJECT ? "active" : "pending",
         };
 
         set((state) => ({
@@ -376,7 +378,12 @@ export const useAppStore = create<AppState>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            const dbActivity = await tasksService.createActivity(newActivity, session.user.id, 'legacy_root', newActivity.objectiveId);
+            // Find parent goal for the objective to use as parent_id in DB if needed, 
+            // but the service should handle the objective hierarchy.
+            const objective = get().objectives.find(o => o.id === newActivity.objectiveId);
+            const parentProjectId = objective?.projectId || '00000000-0000-0000-0000-000000000000'; // Default UUID if not found
+            
+            const dbActivity = await tasksService.createActivity(newActivity, session.user.id, parentProjectId, newActivity.objectiveId);
             set((state) => ({
               activities: state.activities.map(a => a.id === tempId ? dbActivity : a),
               actionPlans: state.actionPlans.map(t => t.activityId === tempId ? { ...t, activityId: dbActivity.id } : t)
@@ -524,13 +531,33 @@ export const useAppStore = create<AppState>()(
       },
 
       updateObjective: async (id, updates) => {
+        const state = get();
+        const currentObj = state.objectives.find(o => o.id === id);
+        if (!currentObj) return;
+
+        let finalUpdates = { ...updates };
+
+        // Capacity validation: if changing status to active/in_progress
+        if (updates.status === 'active' || updates.status === 'in_progress') {
+          const projectId = updates.projectId || currentObj.projectId;
+          const activeInProject = state.objectives.filter(
+            o => o.id !== id && 
+                 o.projectId === projectId && 
+                 (o.status === 'active' || o.status === 'in_progress')
+          ).length;
+
+          if (activeInProject >= MAX_ACTIVE_OBJECTIVES_PER_PROJECT) {
+            finalUpdates.status = 'pending';
+          }
+        }
+
         set((state) => ({
-          objectives: state.objectives.map((obj) => obj.id === id ? { ...obj, ...updates } : obj),
+          objectives: state.objectives.map((obj) => obj.id === id ? { ...obj, ...finalUpdates } : obj),
         }));
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            await tasksService.updateObjective(id, updates);
+            await tasksService.updateObjective(id, finalUpdates);
           } catch (error) {
             console.error("Cloud Error (updateObjective):", error);
           }
@@ -561,8 +588,15 @@ export const useAppStore = create<AppState>()(
       toggleObjectiveStatus: async (id) => {
         const obj = get().objectives.find(o => o.id === id);
         if (!obj) return;
-        const active = get().objectives.filter(o => o.status === 'active').length;
-        const newStatus = obj.status === 'active' ? 'paused' : (active < MAX_ACTIVE_OBJECTIVES ? 'active' : 'pending');
+        
+        const activeInProject = get().objectives.filter(
+          o => o.projectId === obj.projectId && (o.status === 'active' || o.status === 'in_progress')
+        ).length;
+        
+        const newStatus = obj.status === 'active' 
+          ? 'paused' 
+          : (activeInProject < MAX_ACTIVE_OBJECTIVES_PER_PROJECT ? 'active' : 'pending');
+          
         await get().updateObjective(id, { status: newStatus as EntityStatus });
       },
 

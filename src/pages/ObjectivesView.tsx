@@ -14,8 +14,35 @@ export default function ObjectivesView() {
   const [period, setPeriod] = useState<'quarterly' | 'monthly' | 'bimonthly'>('monthly');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedObjective, setSelectedObjective] = useState<Objective | undefined>(undefined);
+  
+  // Filter state
+  const [filterGoalId, setFilterGoalId] = useState<string>("");
+  const [filterProjectId, setFilterProjectId] = useState<string>("");
 
   const { goals } = useAppStore();
+  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
+
+  const activeProjectsForGoal = useMemo(() => {
+    if (!filterGoalId) return [];
+    return projects.filter(p => p.goalId === filterGoalId && (p.status === 'active' || p.status === 'in_progress'));
+  }, [projects, filterGoalId]);
+
+  // Handle default selection and synchronization
+  React.useEffect(() => {
+    if (activeGoals.length > 0 && !filterGoalId) {
+      const firstId = activeGoals[0].id;
+      setFilterGoalId(firstId);
+      setGoalId(firstId); // Sync form
+    }
+  }, [activeGoals, filterGoalId]);
+
+  React.useEffect(() => {
+    if (activeProjectsForGoal.length > 0 && (!filterProjectId || !activeProjectsForGoal.find(p => p.id === filterProjectId))) {
+      const firstProjId = activeProjectsForGoal[0].id;
+      setFilterProjectId(firstProjId);
+      setProjectId(firstProjId); // Sync form
+    }
+  }, [activeProjectsForGoal, filterProjectId]);
 
   const filteredProjects = useMemo(() => {
     if (!goalId) return [];
@@ -23,8 +50,14 @@ export default function ObjectivesView() {
   }, [projects, goalId]);
 
   const activeObjectives = useMemo(
-    () => objectives.filter((o) => o.status === "active" || o.status === "in_progress"),
-    [objectives]
+    () => {
+      let filtered = objectives.filter((o) => o.status === "active" || o.status === "in_progress");
+      if (filterProjectId) {
+        filtered = filtered.filter(o => o.projectId === filterProjectId);
+      }
+      return filtered;
+    },
+    [objectives, filterProjectId]
   );
 
 
@@ -79,9 +112,9 @@ export default function ObjectivesView() {
             }}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
           >
-            <option value="">Selecciona una meta</option>
+            <option value="" style={{ background: "#0F172A", color: "#475569" }}>Selecciona una meta</option>
             {goals.map(g => (
-              <option key={g.id} value={g.id}>{g.title}</option>
+              <option key={g.id} value={g.id} style={{ background: "#0F172A", color: "white" }}>{g.title}</option>
             ))}
           </select>
         </div>
@@ -96,9 +129,9 @@ export default function ObjectivesView() {
             disabled={!goalId}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option value="">{goalId ? 'Selecciona un proyecto' : 'Primero elige una meta'}</option>
+            <option value="" style={{ background: "#0F172A", color: "#475569" }}>{goalId ? 'Selecciona un proyecto' : 'Primero elige una meta'}</option>
             {filteredProjects.map(p => (
-              <option key={p.id} value={p.id}>{p.title}</option>
+              <option key={p.id} value={p.id} style={{ background: "#0F172A", color: "white" }}>{p.title}</option>
             ))}
           </select>
         </div>
@@ -112,9 +145,9 @@ export default function ObjectivesView() {
             onChange={(e) => setPeriod(e.target.value as any)}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
           >
-            <option value="monthly">Mensual</option>
-            <option value="bimonthly">Bimestral</option>
-            <option value="quarterly">Trimestral</option>
+            <option value="monthly" style={{ background: "#0F172A", color: "white" }}>Mensual</option>
+            <option value="bimonthly" style={{ background: "#0F172A", color: "white" }}>Bimestral</option>
+            <option value="quarterly" style={{ background: "#0F172A", color: "white" }}>Trimestral</option>
           </select>
         </div>
 
@@ -126,6 +159,44 @@ export default function ObjectivesView() {
           <Plus size={20} />
           Agregar
         </button>
+      </div>
+
+      <div className="flex flex-col gap-6 mb-12 animate-fade-in">
+        {/* Goal Filter */}
+        <div className="flex flex-wrap gap-2">
+          {activeGoals.map((goal) => (
+            <button
+              key={goal.id}
+              onClick={() => setFilterGoalId(goal.id)}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                filterGoalId === goal.id 
+                  ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
+                  : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
+              }`}
+            >
+              {goal.title}
+            </button>
+          ))}
+        </div>
+
+        {/* Project Filter (Conditional) */}
+        {filterGoalId && activeProjectsForGoal.length > 0 && (
+          <div className="flex flex-wrap gap-2 pl-4 border-l-2 border-indigo-500/20 animate-slide-right">
+            {activeProjectsForGoal.map((proj) => (
+              <button
+                key={proj.id}
+                onClick={() => setFilterProjectId(proj.id)}
+                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                  filterProjectId === proj.id 
+                    ? "bg-sky-500/20 border-sky-500 text-sky-400 shadow-lg shadow-sky-900/20" 
+                    : "bg-slate-900/30 border-white/5 text-slate-500 hover:border-white/10 hover:text-slate-400"
+                }`}
+              >
+                {proj.title}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-16">

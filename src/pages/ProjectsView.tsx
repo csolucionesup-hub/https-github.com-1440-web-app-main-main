@@ -13,19 +13,28 @@ export default function ProjectsView() {
   const [period, setPeriod] = useState<'monthly' | 'quarterly' | 'semester'>('monthly');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
-  const [filterGoalId, setFilterGoalId] = useState<string>("all");
-
+  const [filterGoalId, setFilterGoalId] = useState<string>("");
   const activeGoals = useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
+
+  // Handle default goal selection
+  React.useEffect(() => {
+    if (activeGoals.length > 0 && (!filterGoalId || !activeGoals.find(g => g.id === filterGoalId))) {
+      setFilterGoalId(activeGoals[0].id);
+    }
+  }, [activeGoals, filterGoalId]);
 
   const activeProjects = useMemo(
     () => {
       let filtered = projects.filter((p) => p.status === "active" || p.status === "in_progress");
-      if (filterGoalId !== "all") {
+      if (filterGoalId && filterGoalId !== "all") {
         filtered = filtered.filter(p => p.goalId === filterGoalId);
+      } else if (activeGoals.length > 0) {
+        // Fallback to first active goal if filter is not set
+        filtered = filtered.filter(p => p.goalId === activeGoals[0].id);
       }
       return filtered;
     },
-    [projects, filterGoalId]
+    [projects, filterGoalId, activeGoals]
   );
 
 
@@ -110,16 +119,6 @@ export default function ProjectsView() {
 
       {/* Goal Filter Buttons */}
       <div className="flex flex-wrap gap-2 mb-10 animate-fade-in">
-        <button
-          onClick={() => setFilterGoalId("all")}
-          className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-            filterGoalId === "all" 
-              ? "bg-sky-500/20 border-sky-500 text-sky-400 shadow-lg shadow-sky-900/20" 
-              : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
-          }`}
-        >
-          Todos los Proyectos
-        </button>
         {activeGoals.map((goal) => (
           <button
             key={goal.id}

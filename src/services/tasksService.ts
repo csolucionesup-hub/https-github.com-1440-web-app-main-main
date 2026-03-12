@@ -137,7 +137,7 @@ export const tasksService = {
     if (error) throw error;
     return data.map((a: any) => this.mapActivity(a));
   },
-  async createActivity(activity: Omit<Activity, 'id' | 'createdAt'>, userId: string, taskId: string | undefined, objectiveId: string) {
+  async createActivity(activity: Omit<Activity, 'id' | 'createdAt'>, userId: string, taskId: string | null | undefined, objectiveId: string) {
     const { data, error } = await supabase
       .from('activities')
       .insert({ 
