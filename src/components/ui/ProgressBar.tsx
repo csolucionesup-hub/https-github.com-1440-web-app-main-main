@@ -43,12 +43,14 @@ export default function ProgressBar({
       )}
 
       <div
+        className="glow-cyan"
         style={{
           width: "100%",
           height,
           borderRadius: 999,
-          background,
+          background: "rgba(255,255,255,0.04)",
           overflow: "hidden",
+          border: '1px solid rgba(255,255,255,0.05)'
         }}
       >
         <div
@@ -57,7 +59,8 @@ export default function ProgressBar({
             height: "100%",
             borderRadius: 999,
             background: color,
-            transition: "width 0.35s ease",
+            transition: "width 0.8s cubic-bezier(0.16, 1, 0.3, 1)",
+            boxShadow: '0 0 12px rgba(14, 165, 233, 0.3)'
           }}
         />
       </div>

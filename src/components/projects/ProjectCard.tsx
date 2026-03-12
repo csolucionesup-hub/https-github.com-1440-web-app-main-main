@@ -11,13 +11,13 @@ interface Props {
 }
 
 export const ProjectCard = ({ project, onEdit }: Props) => {
-    const { updateProject, deleteProject, objectives, activities, workSessions } = useAppStore();
+    const { updateProject, removeProject, actionPlans, activities, workSessions } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const relatedObjectives = objectives.filter(o => o.projectId === project.id);
-    const stats = getProjectStats(project.id, objectives, activities, workSessions);
+    const relatedTasks = actionPlans.filter(t => t.projectId === project.id);
+    const stats = getProjectStats(project.id, actionPlans, activities, workSessions); 
     const autoProgress = stats.progress;
 
     useEffect(() => {
@@ -37,6 +37,7 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
 
     const statusColors = {
         pending: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+        active: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
         in_progress: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
         completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
         completed_early: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
@@ -47,6 +48,7 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
 
     const statusLabels = {
         pending: 'Pendiente',
+        active: 'Activo',
         in_progress: 'En Progreso',
         completed: 'Completado',
         completed_early: 'Adelantado',
@@ -66,27 +68,28 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
     return (
         <div
             onClick={() => onEdit?.()}
-            className={`glass rounded-2xl p-6 transition-all duration-300 relative border border-white/5 cursor-pointer hover:bg-slate-800/50 hover:border-sky-500/30 ${isCompleted ? 'opacity-60' : ''}`}
+            className={`glass-card premium-border p-6 transition-all duration-300 relative cursor-pointer hover:border-sky-500/50 ${isCompleted ? 'opacity-60' : ''}`}
+            style={{ borderRadius: 24 }}
         >
-            <div className="flex justify-between items-start mb-4">
-                <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md border ${statusColors[project.status] || statusColors.pending}`}>
+            <div className="flex justify-between items-start mb-6">
+                <span className={`px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest rounded-lg border ${statusColors[project.status as keyof typeof statusColors] || statusColors.pending}`}>
                     {statusLabels[project.status] || 'Pendiente'}
                 </span>
 
                 <div className="relative" ref={menuRef}>
                     <button
                         onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                        className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+                        className="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/10"
                     >
                         <MoreVertical className="w-5 h-5" />
                     </button>
 
                     {isMenuOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-48 glass rounded-xl shadow-2xl overflow-hidden z-20 animate-fade-in border border-white/10">
+                        <div className="absolute right-0 top-full mt-2 w-52 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 14 }}>
                             {project.status !== 'in_progress' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('in_progress'); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/20 hover:text-sky-300 transition-colors"
+                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
                                 >
                                     Poner en Progreso
                                 </button>
@@ -94,7 +97,7 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
                             {project.status === 'in_progress' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('paused'); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/20 hover:text-amber-300 transition-colors border-b border-white/5"
+                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
                                 >
                                     Pausar Proyecto
                                 </button>
@@ -102,20 +105,20 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
                             {onEdit && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onEdit(); setIsMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-yellow-400 hover:bg-yellow-500/20 hover:text-yellow-300 transition-colors"
+                                    className="w-full text-left px-4 py-3 text-sm text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400 transition-colors"
                                 >
                                     Editar
                                 </button>
                             )}
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleStatusChange('completed'); }}
-                                className="w-full text-left px-4 py-3 text-sm text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors"
+                                className="w-full text-left px-4 py-3 text-sm text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors"
                             >
                                 Marcar Completado
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); setIsMenuOpen(false); }}
-                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-white/5"
+                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors border-t border-white/5"
                             >
                                 Eliminar Proyecto
                             </button>
@@ -124,44 +127,44 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
                 </div>
             </div>
 
-            <h3 className={`text-lg font-bold mb-2 ${isCompleted ? 'line-through-dim' : 'text-white'}`}>
+            <h3 className={`text-xl font-bold mb-3 ${isCompleted ? 'line-through opacity-50' : 'text-white'}`}>
                 {project.title}
             </h3>
 
             {project.description && (
-                <p className="text-slate-400 text-sm mb-4 line-clamp-2">
+                <p className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed">
                     {project.description}
                 </p>
             )}
 
-            <div className="mb-4">
-                <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-slate-400 font-medium">Progreso</span>
+            <div className="mb-6">
+                <div className="flex justify-between text-xs mb-2">
+                    <span className="text-slate-400 font-medium font-heading">Progreso</span>
                     <span className="text-sky-400 font-bold">{autoProgress}%</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-slate-900/50 rounded-full overflow-hidden border border-white/5">
                     <div
-                        className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-sky-500 to-indigo-500'}`}
-                        style={{ width: `${autoProgress}%` }}
+                        className={`h-full rounded-full transition-all duration-1000 ${isCompleted ? 'bg-emerald-500' : 'bg-gradient-to-r from-sky-500 to-indigo-500'}`}
+                        style={{ width: `${autoProgress}%`, boxShadow: '0 0 10px rgba(14, 165, 233, 0.3)' }}
                     />
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 mt-auto border-t border-white/5 pt-4">
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <CalendarDays className="w-4 h-4 text-indigo-400" />
+            <div className="flex items-center gap-6 mt-auto border-t border-white/5 pt-5">
+                <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                    <CalendarDays className="w-4 h-4 text-indigo-500/80" />
                     <span>{periodLabels[project.period]}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                    <Target className="w-4 h-4 text-emerald-400" />
-                    <span>{relatedObjectives.length} Objetivos</span>
+                <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                    <Target className="w-4 h-4 text-emerald-500/80" />
+                    <span>{relatedTasks.length} Tareas</span>
                 </div>
             </div>
 
             <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => deleteProject(project.id)}
+                onConfirm={() => removeProject(project.id)}
                 title="Eliminar Proyecto"
                 description={`¿Estás seguro de que deseas eliminar el proyecto "${project.title}" y todo su contenido de forma permanente?`}
             />

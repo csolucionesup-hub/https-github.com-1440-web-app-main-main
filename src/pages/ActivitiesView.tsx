@@ -5,41 +5,53 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, addActivity, logActivityExecution, userSettings } = useAppStore();
+  const { activities, actionPlans, projects, addActivity, logActivityExecution, userSettings } = useAppStore();
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
   const [newTitle, setNewTitle] = useState("");
   const [newMinutes, setNewMinutes] = useState(30);
+  const [taskId, setTaskId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const availableForMetas = 1440 - sleepMinutes - routineMinutes;
   const remainingMinutes = availableForMetas - plannedMinutes;
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     setError(null);
     if (!newTitle) {
       setError("El título es obligatorio");
       return;
     }
+    if (!taskId) {
+      setError("Debes vincular esta actividad a una tarea del Plan de Acción");
+      return;
+    }
     
-    const success = addActivity({
+    // Find objectiveId from task -> project -> objective
+    const task = actionPlans.find(t => t.id === taskId);
+    const project = projects.find(p => p.id === task?.projectId);
+    const objectiveId = project?.objectiveId || "system-root";
+
+    const success = await addActivity({
       title: newTitle,
       plannedMinutesPerSession: newMinutes,
-      objectiveId: "system-temp", // Provisional until objectives are fully linked
+      taskId: taskId, 
+      objectiveId: objectiveId, 
       period: 'daily',
     });
 
     if (success) {
       setNewTitle("");
       setNewMinutes(30);
+      setTaskId("");
     } else {
       setError("No tienes suficientes minutos libres (límite 1440 excedido)");
     }
   };
 
-  const handleLogExecution = (id: string, mins: number) => {
-    const result = logActivityExecution(id, mins);
+  const handleLogExecution = async (id: string, mins: number) => {
+    const result = await logActivityExecution(id, mins);
     if (!result.success) {
       alert(result.message);
     }
@@ -91,6 +103,27 @@ export default function ActivitiesView() {
                       outline: "none",
                     }}
                   />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Vincular a Tarea (Plan de Acción)</label>
+                  <select
+                    value={taskId}
+                    onChange={(e) => setTaskId(e.target.value)}
+                    style={{
+                      width: "100%",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
+                      padding: "10px 12px",
+                      color: "white",
+                      outline: "none",
+                    }}
+                  >
+                    <option value="">Selecciona una tarea...</option>
+                    {actionPlans.map(task => (
+                      <option key={task.id} value={task.id}>{task.title}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Minutos planificados</label>

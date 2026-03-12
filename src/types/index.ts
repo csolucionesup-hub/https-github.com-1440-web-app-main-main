@@ -12,7 +12,7 @@ export interface Goal {
   id: string;
   title: string;
   description?: string;
-  category: string; // Added to align with UI and fix lint errors
+  category: string;
   status: EntityStatus;
   statusUpdatedAt?: string;
   period: 'annual' | 'quarterly';
@@ -40,24 +40,9 @@ export interface AchievementState {
   unlockedIds: string[];
 }
 
-export interface Project {
-  id: string;
-  goalId: string;
-  title: string;
-  description?: string;
-  period: 'semester' | 'quarterly' | 'monthly';
-  status: EntityStatus;
-  statusUpdatedAt?: string;
-  startDate?: string;
-  deadline?: string;
-  order: number;
-  completedAt?: string;
-  createdAt: string;
-}
-
 export interface Objective {
   id: string;
-  projectId: string; // Belongs to Project
+  goalId: string; // Belongs to Goal
   title: string;
   description?: string;
   period: 'quarterly' | 'monthly' | 'bimonthly';
@@ -70,9 +55,40 @@ export interface Objective {
   createdAt: string;
 }
 
-export interface Activity {
+export interface Project {
   id: string;
   objectiveId: string; // Belongs to Objective
+  title: string;
+  description?: string;
+  period: 'semester' | 'quarterly' | 'monthly';
+  status: EntityStatus;
+  statusUpdatedAt?: string;
+  startDate?: string;
+  deadline?: string;
+  order: number;
+  completedAt?: string;
+  createdAt: string;
+}
+
+export interface Task { // Action Plan
+  id: string;
+  projectId: string; // Belongs to Project
+  title: string;
+  description?: string;
+  period: 'weekly' | 'daily';
+  status: EntityStatus;
+  statusUpdatedAt?: string;
+  startDate?: string;
+  deadline?: string;
+  order: number;
+  completedAt?: string;
+  createdAt: string;
+}
+
+export interface Activity {
+  id: string;
+  taskId: string; // Belongs to Task
+  objectiveId?: string; // Direct link if needed for engine
   title: string;
   description?: string;
   period: 'monthly' | 'bimonthly' | 'weekly' | 'daily';
@@ -85,25 +101,10 @@ export interface Activity {
   createdAt: string;
 
   // 1440 minutes tracking
-  plannedDaysOfWeek?: number[]; // [0, 1, 2, 3, 4, 5, 6] 0 = Sunday
+  plannedDaysOfWeek?: number[];
   plannedMinutesPerSession?: number;
   minutesSpentToday?: number;
   priority?: 'low' | 'medium' | 'high' | 'critical';
-}
-
-export interface Task { // Action Plan
-  id: string;
-  activityId: string; // Belongs to Activity
-  title: string;
-  description?: string;
-  period: 'weekly' | 'daily';
-  status: EntityStatus;
-  statusUpdatedAt?: string;
-  startDate?: string;
-  deadline?: string;
-  order: number;
-  completedAt?: string;
-  createdAt: string;
 }
 
 export interface WorkSession {

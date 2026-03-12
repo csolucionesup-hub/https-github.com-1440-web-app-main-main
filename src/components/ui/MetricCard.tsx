@@ -41,9 +41,9 @@ export default function MetricCard({
         position: "relative",
         overflow: "hidden",
         minHeight: 140,
-        background: "linear-gradient(180deg, #111827 0%, #0F172A 100%)",
+        background: "transparent",
         border: `1px solid ${styles.glow}`,
-        boxShadow: `0 12px 30px ${styles.glow}`,
+        boxShadow: `0 20px 40px ${styles.glow}`,
       }}
     >
       <div
@@ -52,29 +52,27 @@ export default function MetricCard({
           top: 0,
           left: 0,
           right: 0,
-          height: 4,
-          background: styles.accent,
+          height: 3,
+          background: `linear-gradient(to right, ${styles.accent}, transparent)`,
         }}
       />
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div
+          className="text-slate-400 font-medium tracking-wide uppercase"
           style={{
-            fontSize: 14,
-            fontWeight: 500,
-            color: "#94A3B8",
-            letterSpacing: "0.02em",
+            fontSize: 12,
           }}
         >
           {label}
         </div>
 
         <div
+          className="text-white font-bold"
           style={{
-            fontSize: 34,
-            fontWeight: 700,
-            color: "#F8FAFC",
+            fontSize: 38,
             lineHeight: 1,
+            letterSpacing: '-0.02em'
           }}
         >
           {value}
@@ -82,9 +80,10 @@ export default function MetricCard({
 
         {hint && (
           <div
+            className="text-slate-300"
             style={{
               fontSize: 13,
-              color: "#CBD5E1",
+              marginTop: 4
             }}
           >
             {hint}

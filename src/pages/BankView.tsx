@@ -1,243 +1,44 @@
+import React from "react";
 import { useAppStore } from "../store/useAppStore";
-import { useMemo, useState } from "react";
-
-const statusLabel: Record<string, string> = {
-  active: "Activa",
-  paused: "Pausada",
-  pending: "Sin empezar",
-  completed: "Completada",
-};
-
-const statusColor: Record<string, string> = {
-  active: "#22c55e",
-  paused: "#f59e0b",
-  pending: "#64748b",
-  completed: "#06b6d4",
-};
+import { GoalCard } from "../components/goals/GoalCard";
+import { Archive } from "lucide-react";
 
 export default function BankView() {
   const goals = useAppStore((state) => state.goals);
-  const removeGoal = useAppStore((state) => state.removeGoal);
-  const toggleGoalStatus = useAppStore((state) => state.toggleGoalStatus);
-  const updateGoal = useAppStore((state) => state.updateGoal);
 
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingTitle, setEditingTitle] = useState("");
-  const [editingCategory, setEditingCategory] = useState("Negocio");
-
-  const bankGoals = useMemo(
-    () => goals.filter((goal) => goal.status !== "active"),
+  const bankGoals = React.useMemo(
+    () => goals.filter((goal) => goal.status !== "active" && goal.status !== "in_progress"),
     [goals]
   );
 
-  function handleDeleteGoal(id: number, title: string) {
-    const confirmed = window.confirm(
-      `Eliminar la meta "${title}" es irreversible.\n\n¿Deseas continuar?`
-    );
-    if (!confirmed) return;
-    removeGoal(id);
-  }
-
-  function startEditing(goal: { id: number; title: string; category: string }) {
-    setEditingId(goal.id);
-    setEditingTitle(goal.title);
-    setEditingCategory(goal.category);
-  }
-
-  function cancelEditing() {
-    setEditingId(null);
-    setEditingTitle("");
-    setEditingCategory("Negocio");
-  }
-
-  function saveEditing() {
-    if (editingId === null) return;
-    if (!editingTitle.trim()) return;
-
-    updateGoal(editingId, {
-      title: editingTitle.trim(),
-      category: editingCategory,
-    });
-
-    cancelEditing();
-  }
-
-  function renderGoalCard(goal: {
-    id: number;
-    title: string;
-    category: string;
-    status: "active" | "paused" | "pending" | "completed";
-  }) {
-    const isEditing = editingId === goal.id;
-
-    return (
-      <div
-        key={goal.id}
-        style={{
-          padding: 16,
-          border: "1px solid #1e293b",
-          borderRadius: 12,
-          marginBottom: 12,
-          background: "#020617",
-        }}
-      >
-        {isEditing ? (
-          <>
-            <input
-              value={editingTitle}
-              onChange={(e) => setEditingTitle(e.target.value)}
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 8,
-                border: "1px solid #334155",
-                background: "#0f172a",
-                color: "white",
-                marginBottom: 10,
-              }}
-            />
-
-            <select
-              value={editingCategory}
-              onChange={(e) => setEditingCategory(e.target.value)}
-              style={{
-                width: "100%",
-                padding: 10,
-                borderRadius: 8,
-                background: "#0f172a",
-                color: "white",
-                border: "1px solid #334155",
-                marginBottom: 12,
-              }}
-            >
-              <option>Negocio</option>
-              <option>Salud</option>
-              <option>Espiritual</option>
-              <option>Personal</option>
-            </select>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={saveEditing}
-                style={{
-                  background: "#22c55e",
-                  border: "none",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  color: "white",
-                  fontWeight: 700,
-                }}
-              >
-                Guardar
-              </button>
-
-              <button
-                onClick={cancelEditing}
-                style={{
-                  background: "#475569",
-                  border: "none",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  color: "white",
-                  fontWeight: 700,
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: 20, fontWeight: 800 }}>{goal.title}</div>
-
-            <div style={{ opacity: 0.8 }}>
-              Categoría: {goal.category}
-            </div>
-
-            <div
-              style={{
-                color: statusColor[goal.status],
-                fontWeight: 700,
-                marginBottom: 12,
-              }}
-            >
-              Estado: {statusLabel[goal.status]}
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => toggleGoalStatus(goal.id)}
-                style={{
-                  background: "#06b6d4",
-                  border: "none",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  color: "white",
-                  fontWeight: 700,
-                }}
-              >
-                {goal.status === "active" ? "Pausar" : "Activar"}
-              </button>
-
-              <button
-                onClick={() =>
-                  startEditing({
-                    id: goal.id,
-                    title: goal.title,
-                    category: goal.category,
-                  })
-                }
-                style={{
-                  background: "#6366f1",
-                  border: "none",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  color: "white",
-                  fontWeight: 700,
-                }}
-              >
-                Editar
-              </button>
-
-              <button
-                onClick={() => handleDeleteGoal(goal.id, goal.title)}
-                style={{
-                  background: "#ef4444",
-                  border: "none",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  color: "white",
-                  fontWeight: 700,
-                }}
-              >
-                Eliminar
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
   return (
-    <div style={{ padding: 30 }}>
-      <h1 style={{ fontSize: 32, marginBottom: 20 }}>
-        Banco de metas
-      </h1>
+    <div className="p-8 max-w-[1400px] mx-auto min-h-screen bg-[#020617]">
+      <header className="mb-12">
+        <div className="flex items-center gap-4 mb-3">
+          <div className="p-3 rounded-2xl bg-slate-800/50 border border-white/10 shadow-xl shadow-slate-900/50">
+            <Archive className="w-8 h-8 text-slate-400" />
+          </div>
+          <h1 className="text-4xl font-extrabold text-white font-heading tracking-tight">
+            Banco de Metas
+          </h1>
+        </div>
+        <p className="text-slate-400 text-lg">Metas pausadas, archivadas o sin empezar que esperan su momento.</p>
+      </header>
 
       {bankGoals.length === 0 ? (
-        <div
-          style={{
-            padding: 16,
-            borderRadius: 12,
-            background: "#020617",
-            border: "1px solid #1e293b",
-          }}
-        >
-          No hay metas en el banco.
+        <div className="glass-card premium-border p-16 text-center rounded-[32px]">
+          <div className="w-20 h-20 bg-slate-800/30 rounded-full flex items-center justify-center mx-auto mb-6 border border-white/5">
+             <Archive className="w-10 h-10 text-slate-600" />
+          </div>
+          <p className="text-slate-400 text-xl font-medium mb-2">Tu banco está vacío.</p>
+          <p className="text-slate-500 max-w-md mx-auto">Cuando pausas una meta o terminas una, aparecerán aquí para tu registro histórico o reactivación futura.</p>
         </div>
       ) : (
-        bankGoals.map(renderGoalCard)
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 animate-fade-in">
+          {bankGoals.map((goal) => (
+            <GoalCard key={goal.id} goal={goal} />
+          ))}
+        </div>
       )}
     </div>
   );

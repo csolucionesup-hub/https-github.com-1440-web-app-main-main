@@ -6,14 +6,14 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    goalId: string;
+    objectiveId: string;
     projectToEdit?: Project;
 }
 
-export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: Props) => {
+export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit }: Props) => {
     const { addProject, updateProject, projects } = useAppStore();
 
-    const relatedActiveCount = projects.filter(p => p.goalId === goalId && p.status === 'in_progress' && p.id !== projectToEdit?.id).length;
+    const relatedActiveCount = projects.filter(p => p.objectiveId === objectiveId && p.status === 'in_progress' && p.id !== projectToEdit?.id).length;
     const isLimitReached = relatedActiveCount >= 6;
 
     const [title, setTitle] = useState('');
@@ -36,7 +36,7 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
         }
     }, [projectToEdit, isOpen, isLimitReached]);
 
-    if (!isOpen || !goalId) return null;
+    if (!isOpen || !objectiveId) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -50,12 +50,10 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
                 });
             } else {
                 addProject({
-                    goalId,
+                    objectiveId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
-                    status,
-                    order: projects.filter(p => p.goalId === goalId).length,
                 });
             }
             onClose();

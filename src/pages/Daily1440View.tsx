@@ -7,6 +7,7 @@ import WeeklyTrendChart from "../components/ui/WeeklyTrendChart";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 import { useAppStore } from "../store/useAppStore";
 import { useShallow } from "zustand/react/shallow";
+import { Star, Award, Trophy } from "lucide-react";
 
 export default function Daily1440View() {
   const { userSettings } = useAppStore();
@@ -14,6 +15,9 @@ export default function Daily1440View() {
   const { freeMinutes, plannedMinutes, executedMinutes, alignmentPercent } = useAppStore(
     useShallow((state) => state.getDailyMetrics())
   );
+
+  const achievements = useAppStore((state) => state.achievements);
+  const { stars, medals, trophies } = achievements;
 
   const dailyProgress = plannedMinutes > 0 
     ? Math.round((executedMinutes / plannedMinutes) * 100) 
@@ -23,10 +27,7 @@ export default function Daily1440View() {
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(79,70,229,0.18), transparent 22%), #0B1220",
-        padding: 24,
-        color: "#F8FAFC",
+        padding: 32,
       }}
     >
       <div
@@ -35,44 +36,53 @@ export default function Daily1440View() {
           margin: "0 auto",
         }}
       >
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 40 }}>
           <div
+            className="text-slate-400 font-medium tracking-widest uppercase"
             style={{
-              fontSize: 14,
-              color: "#94A3B8",
-              marginBottom: 8,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
+              fontSize: 12,
+              marginBottom: 12,
             }}
           >
             1440 minutos de tu vida
           </div>
 
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 36,
-              lineHeight: 1.1,
-              fontWeight: 800,
-            }}
-          >
-            Administra tus minutos para construir tus metas
-          </h1>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 40 }}>
+            <h1
+              className="text-gradient"
+              style={{
+                margin: 0,
+                fontSize: 48,
+                lineHeight: 1.1,
+                fontWeight: 800,
+                maxWidth: '800px'
+              }}
+            >
+              Administra tus minutos para construir tus metas
+            </h1>
+
+            {/* Achievement Summary */}
+            <div style={{ display: 'flex', gap: 16 }}>
+              <StatIcon icon={<Star size={20} fill="#EAB308" color="#EAB308" />} label="Estrellas" value={stars} />
+              <StatIcon icon={<Award size={20} fill="#06B6D4" color="#06B6D4" />} label="Medallas" value={medals} />
+              <StatIcon icon={<Trophy size={20} fill="#A855F7" color="#A855F7" />} label="Trofeos" value={trophies} />
+            </div>
+          </div>
 
           <p
+            className="text-slate-300"
             style={{
-              marginTop: 12,
-              maxWidth: 760,
-              fontSize: 16,
+              marginTop: 20,
+              maxWidth: 800,
+              fontSize: 18,
               lineHeight: 1.6,
-              color: "#CBD5E1",
             }}
           >
             Cada día tiene 1440 minutos. Esta aplicación te ayuda a ver cuántos
             minutos estás invirtiendo realmente en las metas que quieres
             construir.
           </p>
-          <div style={{ marginTop: 20 }}>
+          <div style={{ marginTop: 24 }}>
             <MotivationalQuote strategy="daily" category="time" />
           </div>
         </div>
@@ -88,8 +98,8 @@ export default function Daily1440View() {
           style={{
             display: "grid",
             gridTemplateColumns: "1.4fr 1fr",
-            gap: 16,
-            marginBottom: 24,
+            gap: 20,
+            marginBottom: 32,
           }}
         >
           <Card
@@ -100,44 +110,44 @@ export default function Daily1440View() {
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3,1fr)",
-                gap: 12,
+                gap: 16,
               }}
             >
               <div
+                className="glass-card"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: 14,
-                  padding: 16,
+                  borderRadius: 16,
+                  padding: 20,
                 }}
               >
-                <div style={{ color: "#94A3B8", fontSize: 13 }}>Sueño</div>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{Math.floor(sleepMinutes / 60)} h</div>
+                <div className="text-slate-400 font-medium" style={{ fontSize: 13 }}>Sueño</div>
+                <div className="text-white" style={{ fontSize: 28, fontWeight: 700 }}>{Math.floor(sleepMinutes / 60)} h</div>
               </div>
 
               <div
+                className="glass-card"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: 14,
-                  padding: 16,
+                  borderRadius: 16,
+                  padding: 20,
                 }}
               >
-                <div style={{ color: "#94A3B8", fontSize: 13 }}>
+                <div className="text-slate-400 font-medium" style={{ fontSize: 13 }}>
                   Rutina fija
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{Math.floor(routineMinutes / 60)} h</div>
+                <div className="text-white" style={{ fontSize: 28, fontWeight: 700 }}>{Math.floor(routineMinutes / 60)} h</div>
               </div>
 
               <div
+                className="glass-card"
                 style={{
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: 14,
-                  padding: 16,
+                  borderRadius: 16,
+                  padding: 20,
                 }}
               >
-                <div style={{ color: "#94A3B8", fontSize: 13 }}>
+                <div className="text-slate-400 font-medium" style={{ fontSize: 13 }}>
                   Tiempo para metas
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 700 }}>{(sleepMinutes+routineMinutes+freeMinutes+plannedMinutes >= 1440) ? Math.floor((freeMinutes + plannedMinutes) / 60) : Math.floor((1440 - sleepMinutes - routineMinutes) / 60)} h</div>
+                <div className="text-white" style={{ fontSize: 28, fontWeight: 700 }}>{(sleepMinutes+routineMinutes+freeMinutes+plannedMinutes >= 1440) ? Math.floor((freeMinutes + plannedMinutes) / 60) : Math.floor((1440 - sleepMinutes - routineMinutes) / 60)} h</div>
               </div>
             </div>
           </Card>
@@ -156,9 +166,9 @@ export default function Daily1440View() {
               <ProgressBar label="Progreso diario" value={dailyProgress} />
 
               <div
+                className="text-slate-300"
                 style={{
-                  fontSize: 14,
-                  color: "#94A3B8",
+                  fontSize: 15,
                   lineHeight: 1.6,
                 }}
               >
@@ -170,25 +180,25 @@ export default function Daily1440View() {
           </Card>
         </div>
 
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 32 }}>
           <MinutesGrid />
         </div>
-        <div style={{ marginBottom: 24 }}>
-  <WeeklyTrendChart />
-</div>
+        <div style={{ marginBottom: 32 }}>
+          <WeeklyTrendChart />
+        </div>
 
         <div
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
-            gap: 16,
+            gap: 20,
           }}
         >
           <Card
             title="Metas que más están creciendo"
             subtitle="Tiempo ejecutado por enfoque principal"
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <ProgressBar label="Salud" value={72} color="#10B981" />
               <ProgressBar label="Negocio" value={49} color="#06B6D4" />
               <ProgressBar label="Espiritual" value={28} color="#8B5CF6" />
@@ -199,16 +209,17 @@ export default function Daily1440View() {
             title="Lectura estratégica"
             subtitle="Qué te conviene hacer con tu día"
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div
+                className="glass-card"
                 style={{
-                  padding: 14,
-                  borderRadius: 14,
-                  background: "rgba(79,70,229,0.12)",
-                  border: "1px solid rgba(79,70,229,0.18)",
+                  padding: 16,
+                  borderRadius: 16,
+                  background: "rgba(79,70,229,0.08)",
+                  border: "1px solid rgba(79,70,229,0.15)",
                   color: "#E2E8F0",
                   lineHeight: 1.6,
-                  fontSize: 14,
+                  fontSize: 15,
                 }}
               >
                 Tus minutos ejecutados todavía están por debajo de lo planeado.
@@ -216,14 +227,15 @@ export default function Daily1440View() {
               </div>
 
               <div
+                className="glass-card"
                 style={{
-                  padding: 14,
-                  borderRadius: 14,
-                  background: "rgba(16,185,129,0.10)",
-                  border: "1px solid rgba(16,185,129,0.18)",
+                  padding: 16,
+                  borderRadius: 16,
+                  background: "rgba(16,185,129,0.08)",
+                  border: "1px solid rgba(16,185,129,0.15)",
                   color: "#E2E8F0",
                   lineHeight: 1.6,
-                  fontSize: 14,
+                  fontSize: 15,
                 }}
               >
                 La meta mejor atendida hoy es Salud. Te conviene reforzar
@@ -233,6 +245,26 @@ export default function Daily1440View() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatIcon({ icon, label, value }: { icon: React.ReactNode, label: string, value: number }) {
+  return (
+    <div 
+      className="glass-card premium-border animate-float"
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        padding: '12px 16px',
+        borderRadius: 20,
+        minWidth: 100
+      }}
+      title={label}
+    >
+      <div style={{ marginBottom: 6 }}>{icon}</div>
+      <div className="text-white" style={{ fontSize: 22, fontWeight: 800 }}>{value}</div>
     </div>
   );
 }

@@ -62,7 +62,7 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
             addGoal({
                 title,
                 description,
-                status,
+                category: 'Negocio', // Default category
                 period,
                 priority: 'high',
                 color,

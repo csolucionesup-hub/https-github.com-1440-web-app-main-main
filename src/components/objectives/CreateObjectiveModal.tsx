@@ -6,11 +6,11 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    projectId: string;
+    goalId: string;
     objectiveToEdit?: Objective;
 }
 
-export const CreateObjectiveModal = ({ isOpen, onClose, projectId, objectiveToEdit }: Props) => {
+export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit }: Props) => {
     const { addObjective, updateObjective } = useAppStore();
 
     const [title, setTitle] = useState('');
@@ -32,7 +32,7 @@ export const CreateObjectiveModal = ({ isOpen, onClose, projectId, objectiveToEd
         }
     }, [objectiveToEdit, isOpen]);
 
-    if (!isOpen || !projectId) return null;
+    if (!isOpen || !goalId) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,12 +46,10 @@ export const CreateObjectiveModal = ({ isOpen, onClose, projectId, objectiveToEd
                 });
             } else {
                 addObjective({
-                    projectId,
+                    goalId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
-                    status,
-                    order: 0, // This line was originally `order: 0,` and `progress: 0,` was removed. The instruction only asked to remove `progress: 0`.
                 });
             }
             onClose();

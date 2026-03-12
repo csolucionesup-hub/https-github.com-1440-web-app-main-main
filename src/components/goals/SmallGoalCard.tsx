@@ -10,7 +10,7 @@ interface SmallGoalCardProps {
 }
 
 export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
-    const { updateGoal, deleteGoal } = useAppStore();
+    const { updateGoal, removeGoal } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -30,22 +30,25 @@ export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
     };
 
     const statusColors = {
+        pending: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+        active: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
         in_progress: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
-        paused: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
         completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-        completed_early: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-        archived: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-        pending: 'bg-slate-700/50 text-slate-300 border-slate-600/50'
+        completed_early: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+        paused: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+        overdue: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+        archived: 'bg-slate-800/50 text-slate-500 border-slate-700',
     };
 
-    // Convert status to readable text
     const statusLabels = {
-        in_progress: 'Activa',
-        paused: 'Pausada',
-        completed: 'Terminada',
-        completed_early: 'Terminada Anticipada',
-        archived: 'Archivada',
-        pending: 'Futura'
+        pending: 'Pendiente',
+        active: 'Activo',
+        in_progress: 'En Progreso',
+        completed: 'Completado',
+        completed_early: 'Adelantado',
+        paused: 'Pausado',
+        overdue: 'Atrasado',
+        archived: 'Archivado'
     };
 
     const isCompleted = goal.status === 'completed' || goal.status === 'completed_early';
@@ -53,30 +56,28 @@ export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
     return (
         <div
             onClick={() => onEdit?.()}
-            className={`glass rounded-xl p-4 transition-all duration-300 relative group overflow-hidden cursor-pointer hover:bg-white/5 ${isCompleted ? 'opacity-50' : ''}`}
-            style={{ borderLeft: `4px solid ${goal.color}` }}
+            className={`glass-card premium-border p-4 transition-all duration-300 relative group overflow-hidden cursor-pointer hover:border-white/20 ${isCompleted ? 'opacity-60' : ''}`}
+            style={{ borderRadius: 16, borderLeft: `4px solid ${goal.color}` }}
         >
-
-            <div className="flex justify-between items-start mb-2">
-                <h3 className={`text-base font-bold font-heading line-clamp-1 ${isCompleted ? 'line-through-dim' : 'text-white'}`}>
+            <div className="flex justify-between items-start mb-3">
+                <h3 className={`text-base font-bold font-heading line-clamp-1 ${isCompleted ? 'line-through opacity-50' : 'text-white'}`}>
                     {goal.title}
                 </h3>
 
                 <div className="relative" ref={menuRef}>
                     <button
                         onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }}
-                        className="text-slate-400 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+                        className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
                     >
                         <MoreVertical className="w-4 h-4" />
                     </button>
 
-                    {/* Dropdown Menu */}
                     {isMenuOpen && (
-                        <div className="absolute right-0 top-full mt-2 w-48 glass rounded-xl shadow-2xl overflow-hidden z-[60] animate-fade-in">
+                        <div className="absolute right-0 top-full mt-2 w-48 glass-card premium-border shadow-2xl overflow-hidden z-[60] animate-fade-in" style={{ borderRadius: 12 }}>
                             {goal.status !== 'in_progress' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('in_progress'); setIsMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/20 hover:text-sky-300 transition-colors"
+                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 transition-colors"
                                 >
                                     Activar Meta
                                 </button>
@@ -84,7 +85,7 @@ export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
                             {goal.status === 'in_progress' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('paused'); setIsMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/20 hover:text-amber-300 transition-colors"
+                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
                                 >
                                     Pausar Meta
                                 </button>
@@ -92,22 +93,14 @@ export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
                             {onEdit && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); onEdit(); setIsMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-yellow-400 hover:bg-yellow-500/20 hover:text-yellow-300 transition-colors"
+                                    className="w-full text-left px-4 py-3 text-sm text-yellow-500 hover:bg-yellow-500/10 hover:text-yellow-400 transition-colors"
                                 >
                                     Editar
                                 </button>
                             )}
-                            {goal.status !== 'completed' && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('completed'); setIsMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors"
-                                >
-                                    Marcar como Terminada
-                                </button>
-                            )}
                             <button
                                 onClick={(e) => { e.stopPropagation(); setIsDeleteModalOpen(true); setIsMenuOpen(false); }}
-                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors border-t border-white/5"
+                                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors border-t border-white/5"
                             >
                                 Eliminar
                             </button>
@@ -116,13 +109,13 @@ export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
                 </div>
             </div>
 
-            <div className="flex items-center justify-between mt-3">
-                <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-bold rounded-md border ${statusColors[goal.status as keyof typeof statusColors] || statusColors.paused}`}>
-                    {statusLabels[goal.status as keyof typeof statusLabels] || 'Futura'}
+            <div className="flex items-center justify-between">
+                <span className={`px-2 py-0.5 text-[9px] uppercase tracking-widest font-bold rounded-lg border ${statusColors[goal.status as keyof typeof statusColors] || statusColors.pending}`}>
+                    {statusLabels[goal.status] || 'Pendiente'}
                 </span>
 
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <CalendarDays className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                    <CalendarDays className="w-3.5 h-3.5 text-indigo-500/80" />
                     <span>{goal.period === 'annual' ? 'Anual' : 'Trimestral'}</span>
                 </div>
             </div>
@@ -130,7 +123,7 @@ export const SmallGoalCard = ({ goal, onEdit }: SmallGoalCardProps) => {
             <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => deleteGoal(goal.id)}
+                onConfirm={() => removeGoal(goal.id)}
                 title="Eliminar Meta"
                 description={`¿Estás seguro de que deseas eliminar la meta "${goal.title}" de forma permanente?`}
             />

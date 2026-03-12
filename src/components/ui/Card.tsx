@@ -15,24 +15,21 @@ export default function Card({
 }: CardProps) {
   return (
     <div
+      className="glass-card premium-border"
       style={{
-        background: "#111827",
-        borderRadius: 18,
-        padding: 20,
-        border: "1px solid rgba(255,255,255,0.06)",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
+        borderRadius: 24,
+        padding: 24,
         marginBottom: 16,
         ...style
       }}
     >
       {(title || subtitle) && (
-        <div style={{ marginBottom: 14 }}>
+        <div style={{ marginBottom: 18 }}>
           {title && (
             <div
+              className="text-white font-semibold"
               style={{
-                fontSize: 18,
-                fontWeight: 600,
-                color: "#F8FAFC"
+                fontSize: 20,
               }}
             >
               {title}
@@ -41,9 +38,10 @@ export default function Card({
 
           {subtitle && (
             <div
+              className="text-slate-400"
               style={{
-                fontSize: 13,
-                color: "#94A3B8"
+                fontSize: 14,
+                marginTop: 4
               }}
             >
               {subtitle}

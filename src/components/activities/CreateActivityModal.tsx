@@ -6,11 +6,11 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    objectiveId: string;
+    taskId: string;
     activityToEdit?: Activity;
 }
 
-export const CreateActivityModal = ({ isOpen, onClose, objectiveId, activityToEdit }: Props) => {
+export const CreateActivityModal = ({ isOpen, onClose, taskId, activityToEdit }: Props) => {
     const { addActivity, updateActivity } = useAppStore();
 
     const [title, setTitle] = useState('');
@@ -41,7 +41,7 @@ export const CreateActivityModal = ({ isOpen, onClose, objectiveId, activityToEd
         }
     }, [activityToEdit, isOpen]);
 
-    if (!isOpen || !objectiveId) return null;
+    if (!isOpen || !taskId) return null;
 
     const toggleDay = (dayIndex: number) => {
         setPlannedDaysOfWeek(prev =>
@@ -65,12 +65,10 @@ export const CreateActivityModal = ({ isOpen, onClose, objectiveId, activityToEd
             });
         } else {
             addActivity({
-                objectiveId,
+                taskId,
                 title: title.trim(),
                 description: description.trim(),
                 period,
-                status,
-                order: 0,
                 plannedMinutesPerSession,
                 priority,
                 plannedDaysOfWeek
