@@ -6,24 +6,18 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    projectId: string;
+    goalId: string;
     objectiveToEdit?: Objective;
 }
 
-export const CreateObjectiveModal = ({ isOpen, onClose, projectId, objectiveToEdit }: Props) => {
-    const { addObjective, updateObjective, goals, projects } = useAppStore();
+export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit }: Props) => {
+    const { addObjective, updateObjective, goals } = useAppStore();
 
-    const [selectedGoalId, setSelectedGoalId] = useState('');
-    const [internalProjectId, setInternalProjectId] = useState(projectId || '');
+    const [selectedGoalId, setSelectedGoalId] = useState(goalId || '');
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [period, setPeriod] = useState<'quarterly' | 'bimonthly' | 'monthly'>('monthly');
     const [status, setStatus] = useState<EntityStatus>('active');
-
-    const filteredProjects = React.useMemo(() => {
-        if (!selectedGoalId) return [];
-        return projects.filter(p => p.goalId === selectedGoalId);
-    }, [projects, selectedGoalId]);
 
     React.useEffect(() => {
         if (objectiveToEdit && isOpen) {
@@ -31,56 +25,40 @@ export const CreateObjectiveModal = ({ isOpen, onClose, projectId, objectiveToEd
             setDescription(objectiveToEdit.description || '');
             setPeriod(objectiveToEdit.period);
             setStatus(objectiveToEdit.status);
-            
-            // Find parent goal
-            const parentProj = projects.find(p => p.id === objectiveToEdit.projectId);
-            if (parentProj) {
-                setSelectedGoalId(parentProj.goalId);
-                setInternalProjectId(objectiveToEdit.projectId);
-            }
+            setSelectedGoalId(objectiveToEdit.goalId);
         } else if (isOpen) {
             setTitle('');
             setDescription('');
             setPeriod('monthly');
             setStatus('active');
-            
-            if (projectId) {
-                const parentProj = projects.find(p => p.id === projectId);
-                if (parentProj) {
-                    setSelectedGoalId(parentProj.goalId);
-                    setInternalProjectId(projectId);
-                }
-            } else {
-                setSelectedGoalId('');
-                setInternalProjectId('');
-            }
+            setSelectedGoalId(goalId || '');
         }
-    }, [objectiveToEdit, isOpen, projectId, projects]);
+    }, [objectiveToEdit, isOpen, goalId]);
 
     if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const finalProjectId = internalProjectId || projectId;
-        if (title.trim() && finalProjectId) {
+        const finalGoalId = selectedGoalId || goalId;
+        if (title.trim() && finalGoalId) {
             if (objectiveToEdit) {
                 updateObjective(objectiveToEdit.id, {
                     title: title.trim(),
                     description: description.trim(),
                     period,
                     status,
-                    projectId: finalProjectId
+                    goalId: finalGoalId
                 });
             } else {
                 addObjective({
-                    projectId: finalProjectId,
+                    goalId: finalGoalId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
                 });
             }
             onClose();
-        };
+        }
     };
 
     return (
@@ -98,37 +76,18 @@ export const CreateObjectiveModal = ({ isOpen, onClose, projectId, objectiveToEd
                 </h2>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-300 mb-1.5">1. Meta</label>
-                            <select
-                                value={selectedGoalId}
-                                onChange={(e) => {
-                                    setSelectedGoalId(e.target.value);
-                                    setInternalProjectId('');
-                                }}
-                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
-                            >
-                                <option value="">Selecciona meta</option>
-                                {goals.map(g => (
-                                    <option key={g.id} value={g.id}>{g.title}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-300 mb-1.5">2. Proyecto</label>
-                            <select
-                                value={internalProjectId}
-                                onChange={(e) => setInternalProjectId(e.target.value)}
-                                disabled={!selectedGoalId}
-                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50"
-                            >
-                                <option value="">{selectedGoalId ? 'Selecciona proyecto' : 'Elige meta'}</option>
-                                {filteredProjects.map(p => (
-                                    <option key={p.id} value={p.id}>{p.title}</option>
-                                ))}
-                            </select>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-300 mb-1.5">Meta</label>
+                        <select
+                            value={selectedGoalId}
+                            onChange={(e) => setSelectedGoalId(e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+                        >
+                            <option value="">Selecciona meta</option>
+                            {goals.map(g => (
+                                <option key={g.id} value={g.id}>{g.title}</option>
+                            ))}
+                        </select>
                     </div>
 
                     <div>

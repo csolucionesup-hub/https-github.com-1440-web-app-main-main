@@ -3,46 +3,59 @@ import { useAppStore } from "../store/useAppStore";
 import { ProjectCard } from "../components/projects/ProjectCard";
 import { Plus, FolderKanban } from "lucide-react";
 import { CreateProjectModal } from "../components/projects/CreateProjectModal";
-import { Project } from "../types";
+import { Project, Objective } from "../types";
 
 export default function ProjectsView() {
-  const { goals, projects, addProject } = useAppStore();
+  const { goals, objectives, projects, addProject } = useAppStore();
   
   const [name, setName] = useState("");
-  const [goalId, setGoalId] = useState("");
+  const [objectiveId, setObjectiveId] = useState("");
   const [period, setPeriod] = useState<'monthly' | 'quarterly' | 'semester'>('monthly');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
+  
+  // Filter state
   const [filterGoalId, setFilterGoalId] = useState<string>("");
-  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
+  const [filterObjectiveId, setFilterObjectiveId] = useState<string>("");
 
-  // Handle default goal selection
+  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
+
+  const objectivesForGoal = useMemo(() => {
+    if (!filterGoalId) return [];
+    return objectives.filter(o => o.goalId === filterGoalId);
+  }, [objectives, filterGoalId]);
+
+  // Handle default selections
   React.useEffect(() => {
-    if (activeGoals.length > 0 && (!filterGoalId || !activeGoals.find(g => g.id === filterGoalId))) {
+    if (activeGoals.length > 0 && !filterGoalId) {
       setFilterGoalId(activeGoals[0].id);
     }
   }, [activeGoals, filterGoalId]);
 
+  React.useEffect(() => {
+    if (objectivesForGoal.length > 0 && (!filterObjectiveId || !objectivesForGoal.find(o => o.id === filterObjectiveId))) {
+      const firstId = objectivesForGoal[0].id;
+      setFilterObjectiveId(firstId);
+      setObjectiveId(firstId);
+    }
+  }, [objectivesForGoal, filterObjectiveId]);
+
   const activeProjects = useMemo(
     () => {
-      let filtered = projects.filter((p) => p.status === "active" || p.status === "in_progress");
-      if (filterGoalId && filterGoalId !== "all") {
-        filtered = filtered.filter(p => p.goalId === filterGoalId);
-      } else if (activeGoals.length > 0) {
-        // Fallback to first active goal if filter is not set
-        filtered = filtered.filter(p => p.goalId === activeGoals[0].id);
+      let filtered = projects.filter((p) => p.status === "active" || p.status === "in_progress" || p.status === "pending");
+      if (filterObjectiveId) {
+        filtered = filtered.filter(p => p.objectiveId === filterObjectiveId);
       }
       return filtered;
     },
-    [projects, filterGoalId, activeGoals]
+    [projects, filterObjectiveId]
   );
 
-
   function handleAdd() {
-    if (!name.trim() || !goalId) return;
+    if (!name.trim() || !objectiveId) return;
     addProject({
       title: name,
-      goalId: goalId,
+      objectiveId: objectiveId,
       period: period
     });
     setName("");
@@ -78,16 +91,16 @@ export default function ProjectsView() {
 
         <div className="w-full md:w-64">
           <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] mb-3 ml-1">
-            Meta Relacionada
+            Asociar a Objetivo
           </label>
           <select
-            value={goalId}
-            onChange={(e) => setGoalId(e.target.value)}
+            value={objectiveId}
+            onChange={(e) => setObjectiveId(e.target.value)}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-sky-500/50 transition-all cursor-pointer"
           >
-            <option value="">Selecciona una meta</option>
-            {goals.map(g => (
-              <option key={g.id} value={g.id}>{g.title}</option>
+            <option value="">Selecciona un objetivo</option>
+            {objectives.map(o => (
+              <option key={o.id} value={o.id}>{o.title}</option>
             ))}
           </select>
         </div>
@@ -109,7 +122,7 @@ export default function ProjectsView() {
 
         <button
           onClick={handleAdd}
-          disabled={!name.trim() || !goalId}
+          disabled={!name.trim() || !objectiveId}
           className="h-[52px] bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold px-8 rounded-xl transition-all shadow-lg shadow-sky-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
         >
           <Plus size={20} />
@@ -117,21 +130,40 @@ export default function ProjectsView() {
         </button>
       </div>
 
-      {/* Goal Filter Buttons */}
-      <div className="flex flex-wrap gap-2 mb-10 animate-fade-in">
-        {activeGoals.map((goal) => (
-          <button
-            key={goal.id}
-            onClick={() => setFilterGoalId(goal.id)}
-            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-              filterGoalId === goal.id 
-                ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
-                : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
-            }`}
-          >
-            {goal.title}
-          </button>
-        ))}
+      <div className="flex flex-col gap-6 mb-12 animate-fade-in">
+        <div className="flex flex-wrap gap-2">
+          {activeGoals.map((goal) => (
+            <button
+              key={goal.id}
+              onClick={() => setFilterGoalId(goal.id)}
+              className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                filterGoalId === goal.id 
+                  ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
+                  : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
+              }`}
+            >
+              {goal.title}
+            </button>
+          ))}
+        </div>
+
+        {filterGoalId && objectivesForGoal.length > 0 && (
+          <div className="flex flex-wrap gap-2 pl-4 border-l-2 border-indigo-500/20 animate-slide-right">
+            {objectivesForGoal.map((obj) => (
+              <button
+                key={obj.id}
+                onClick={() => setFilterObjectiveId(obj.id)}
+                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                  filterObjectiveId === obj.id 
+                    ? "bg-sky-500/20 border-sky-500 text-sky-400 shadow-lg shadow-sky-900/20" 
+                    : "bg-slate-900/30 border-white/5 text-slate-500 hover:border-white/10 hover:text-slate-400"
+                }`}
+              >
+                {obj.title}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-16">
@@ -142,7 +174,7 @@ export default function ProjectsView() {
           </h2>
           {activeProjects.length === 0 ? (
             <div className="p-12 glass-card premium-border text-center rounded-[24px]">
-              <p className="text-slate-500">No hay proyectos activos esta temporada.</p>
+              <p className="text-slate-500">No hay proyectos activos para este objetivo.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -159,8 +191,8 @@ export default function ProjectsView() {
             </div>
           )}
         </section>
-
       </div>
+
       {selectedProject && (
         <CreateProjectModal
           isOpen={isEditModalOpen}
@@ -168,22 +200,10 @@ export default function ProjectsView() {
             setIsEditModalOpen(false);
             setSelectedProject(undefined);
           }}
-          goalId={selectedProject.goalId}
+          objectiveId={selectedProject.objectiveId}
           projectToEdit={selectedProject}
         />
       )}
     </div>
-  );}
-
-const iconBtnStyle: React.CSSProperties = {
-  background: "#1e293b",
-  border: "none",
-  color: "#94a3b8",
-  padding: 8,
-  borderRadius: 8,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s"
-};
+  );
+}

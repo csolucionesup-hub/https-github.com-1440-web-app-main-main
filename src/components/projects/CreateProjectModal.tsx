@@ -6,20 +6,22 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    goalId: string;
+    objectiveId: string;
     projectToEdit?: Project;
 }
 
-export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: Props) => {
-    const { addProject, updateProject, projects } = useAppStore();
-    const relatedActiveCount = projects.filter(p => p.goalId === goalId && p.status === 'active' && p.id !== projectToEdit?.id).length;
+export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit }: Props) => {
+    const { addProject, updateProject, projects, objectives } = useAppStore();
+    
+    // Limits logic (Optional, keeping for stability)
+    const relatedActiveCount = projects.filter(p => p.objectiveId === objectiveId && p.status === 'active' && p.id !== projectToEdit?.id).length;
     const isLimitReached = relatedActiveCount >= 6;
 
+    const [selectedObjectiveId, setSelectedObjectiveId] = useState(objectiveId || '');
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [period, setPeriod] = useState<'semester' | 'quarterly' | 'monthly'>('monthly');
-
-    const [status, setStatus] = useState<EntityStatus>('pending');
+    const [status, setStatus] = useState<EntityStatus>('active');
 
     React.useEffect(() => {
         if (projectToEdit && isOpen) {
@@ -27,29 +29,33 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
             setDescription(projectToEdit.description || '');
             setPeriod(projectToEdit.period);
             setStatus(projectToEdit.status);
+            setSelectedObjectiveId(projectToEdit.objectiveId);
         } else if (isOpen) {
             setTitle('');
             setDescription('');
             setPeriod('monthly');
             setStatus(isLimitReached ? 'pending' : 'active');
+            setSelectedObjectiveId(objectiveId || '');
         }
-    }, [projectToEdit, isOpen, isLimitReached]);
+    }, [projectToEdit, isOpen, objectiveId, isLimitReached]);
 
-    if (!isOpen || !goalId) return null;
+    if (!isOpen) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (title.trim()) {
+        const finalObjectiveId = selectedObjectiveId || objectiveId;
+        if (title.trim() && finalObjectiveId) {
             if (projectToEdit) {
                 updateProject(projectToEdit.id, {
                     title: title.trim(),
                     description: description.trim(),
                     period,
                     status,
+                    objectiveId: finalObjectiveId as any // Cast because of Partial type issues if any
                 });
             } else {
                 addProject({
-                    goalId,
+                    objectiveId: finalObjectiveId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
@@ -57,11 +63,6 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
             }
             onClose();
         }
-        // Reset
-        setTitle('');
-        setDescription('');
-        setPeriod('monthly');
-        onClose();
     };
 
     return (
@@ -74,20 +75,25 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
                     <X className="w-5 h-5" />
                 </button>
 
-                <h2 className="text-xl font-bold font-heading mb-4">
+                <h2 className="text-xl font-bold font-heading mb-6">
                     {projectToEdit ? 'Editar Proyecto' : 'Crear Nuevo Proyecto'}
                 </h2>
 
-                {isLimitReached && (!projectToEdit || projectToEdit.status !== 'active') && (
-                    <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 text-sm text-amber-400">
-                        <span className="shrink-0 mt-0.5">⚠️</span>
-                        <p>
-                            Esta meta ya tiene <strong>6 proyectos activos</strong>. Todo proyecto adicional será enviado al <strong>Banco de Proyectos</strong> (Estado Pendiente o Futuro).
-                        </p>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-300 mb-1.5">Objetivo Estratégico</label>
+                        <select
+                            value={selectedObjectiveId}
+                            onChange={(e) => setSelectedObjectiveId(e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
+                        >
+                            <option value="">Selecciona un objetivo</option>
+                            {objectives.map(o => (
+                                <option key={o.id} value={o.id}>{o.title}</option>
+                            ))}
+                        </select>
                     </div>
-                )}
 
-                <form onSubmit={handleSubmit} className="space-y-3">
                     <div>
                         <label className="block text-sm font-semibold text-slate-300 mb-1.5">Título del Proyecto</label>
                         <input
@@ -95,7 +101,7 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
                             className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all font-medium"
-                            placeholder="Ej: Aumentar ventas un 20%"
+                            placeholder="Ej: Lanzamiento Campaña Q2"
                         />
                     </div>
 
@@ -105,7 +111,7 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all resize-none h-20"
-                            placeholder="Detalles sobre cómo medir o alcanzar este proyecto..."
+                            placeholder="Detalles sobre este proyecto..."
                         />
                     </div>
 
@@ -117,9 +123,9 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
                                 onChange={(e) => setPeriod(e.target.value as any)}
                                 className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                             >
-                                <option value="monthly" className="bg-slate-900 text-white">Mensual</option>
-                                <option value="quarterly" className="bg-slate-900 text-white">Trimestral</option>
-                                <option value="semester" className="bg-slate-900 text-white">Semestral</option>
+                                <option value="monthly">Mensual</option>
+                                <option value="quarterly">Trimestral</option>
+                                <option value="semester">Semestral</option>
                             </select>
                         </div>
                         <div>
@@ -127,29 +133,27 @@ export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: P
                             <select
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value as any)}
-                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={isLimitReached && status !== 'in_progress'}
-                                title={isLimitReached && status !== 'in_progress' ? "Límite de 6 activos alcanzado" : ""}
+                                className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                             >
-                                <option value="active" className="bg-slate-900 text-white" disabled={isLimitReached && status !== 'active'}>Activo</option>
-                                <option value="pending" className="bg-slate-900 text-white">Pendiente / Futuro</option>
-                                <option value="paused" className="bg-slate-900 text-white">Pausado</option>
-                                {projectToEdit && <option value="completed" className="bg-emerald-900 text-emerald-100">Completado</option>}
+                                <option value="active">Activo</option>
+                                <option value="pending">Pendiente</option>
+                                <option value="paused">Pausado</option>
+                                {projectToEdit && <option value="completed">Completado</option>}
                             </select>
                         </div>
                     </div>
 
-                    <div className="pt-3 flex justify-end gap-3 border-t border-white/5 mt-4">
+                    <div className="pt-4 flex justify-end gap-3 border-t border-white/5 mt-6">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-5 py-2 text-sm rounded-xl font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+                            className="px-5 py-2.5 text-sm rounded-xl font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white px-5 py-2 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)]"
+                            className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white px-5 py-2.5 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)]"
                         >
                             {projectToEdit ? 'Guardar Cambios' : 'Crear Proyecto'}
                         </button>

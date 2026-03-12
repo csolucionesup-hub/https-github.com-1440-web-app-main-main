@@ -42,7 +42,7 @@ export interface AchievementState {
 
 export interface Objective {
   id: string;
-  projectId: string; // Belongs to Project
+  goalId: string; // Belongs to Goal
   title: string;
   description?: string;
   period: 'quarterly' | 'monthly' | 'bimonthly';
@@ -57,7 +57,7 @@ export interface Objective {
 
 export interface Project {
   id: string;
-  goalId: string; // Belongs to Goal
+  objectiveId: string; // Belongs to Objective
   title: string;
   description?: string;
   period: 'semester' | 'quarterly' | 'monthly';

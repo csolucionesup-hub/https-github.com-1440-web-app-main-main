@@ -6,70 +6,47 @@ import { CreateObjectiveModal } from "../components/objectives/CreateObjectiveMo
 import { Objective } from "../types";
 
 export default function ObjectivesView() {
-  const { projects, objectives, addObjective } = useAppStore();
+  const { goals, objectives, addObjective } = useAppStore();
   
   const [name, setName] = useState("");
   const [goalId, setGoalId] = useState("");
-  const [projectId, setProjectId] = useState("");
   const [period, setPeriod] = useState<'quarterly' | 'monthly' | 'bimonthly'>('monthly');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedObjective, setSelectedObjective] = useState<Objective | undefined>(undefined);
   
   // Filter state
   const [filterGoalId, setFilterGoalId] = useState<string>("");
-  const [filterProjectId, setFilterProjectId] = useState<string>("");
 
-  const { goals } = useAppStore();
-  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
-
-  const activeProjectsForGoal = useMemo(() => {
-    if (!filterGoalId) return [];
-    return projects.filter(p => p.goalId === filterGoalId && (p.status === 'active' || p.status === 'in_progress'));
-  }, [projects, filterGoalId]);
+  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
 
   // Handle default selection and synchronization
   React.useEffect(() => {
     if (activeGoals.length > 0 && !filterGoalId) {
       const firstId = activeGoals[0].id;
       setFilterGoalId(firstId);
-      setGoalId(firstId); // Sync form
+      setGoalId(firstId); 
     }
   }, [activeGoals, filterGoalId]);
 
-  React.useEffect(() => {
-    if (activeProjectsForGoal.length > 0 && (!filterProjectId || !activeProjectsForGoal.find(p => p.id === filterProjectId))) {
-      const firstProjId = activeProjectsForGoal[0].id;
-      setFilterProjectId(firstProjId);
-      setProjectId(firstProjId); // Sync form
-    }
-  }, [activeProjectsForGoal, filterProjectId]);
-
-  const filteredProjects = useMemo(() => {
-    if (!goalId) return [];
-    return projects.filter(p => p.goalId === goalId);
-  }, [projects, goalId]);
-
   const activeObjectives = useMemo(
     () => {
-      let filtered = objectives.filter((o) => o.status === "active" || o.status === "in_progress");
-      if (filterProjectId) {
-        filtered = filtered.filter(o => o.projectId === filterProjectId);
+      let filtered = objectives.filter((o) => o.status === "active" || o.status === "in_progress" || o.status === "pending");
+      if (filterGoalId) {
+        filtered = filtered.filter(o => o.goalId === filterGoalId);
       }
       return filtered;
     },
-    [objectives, filterProjectId]
+    [objectives, filterGoalId]
   );
 
-
   function handleAdd() {
-    if (!name.trim() || !projectId) return;
+    if (!name.trim() || !goalId) return;
     addObjective({
       title: name,
-      projectId: projectId,
+      goalId: goalId,
       period: period
     });
     setName("");
-    // We keep goalId and projectId for potential batch entry if user prefers
   }
 
   return (
@@ -102,36 +79,16 @@ export default function ObjectivesView() {
 
         <div className="w-full md:w-64">
           <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-3 ml-1">
-            1. Seleccionar Meta
+            Asociar a Meta
           </label>
           <select
             value={goalId}
-            onChange={(e) => {
-              setGoalId(e.target.value);
-              setProjectId(""); // Reset project when goal changes
-            }}
+            onChange={(e) => setGoalId(e.target.value)}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
           >
             <option value="" style={{ background: "#0F172A", color: "#475569" }}>Selecciona una meta</option>
-            {goals.map(g => (
+            {activeGoals.map(g => (
               <option key={g.id} value={g.id} style={{ background: "#0F172A", color: "white" }}>{g.title}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="w-full md:w-64">
-          <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-3 ml-1">
-            2. Asociar a Proyecto
-          </label>
-          <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            disabled={!goalId}
-            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <option value="" style={{ background: "#0F172A", color: "#475569" }}>{goalId ? 'Selecciona un proyecto' : 'Primero elige una meta'}</option>
-            {filteredProjects.map(p => (
-              <option key={p.id} value={p.id} style={{ background: "#0F172A", color: "white" }}>{p.title}</option>
             ))}
           </select>
         </div>
@@ -153,7 +110,7 @@ export default function ObjectivesView() {
 
         <button
           onClick={handleAdd}
-          disabled={!name.trim() || !projectId}
+          disabled={!name.trim() || !goalId}
           className="h-[52px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold px-8 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
         >
           <Plus size={20} />
@@ -162,7 +119,6 @@ export default function ObjectivesView() {
       </div>
 
       <div className="flex flex-col gap-6 mb-12 animate-fade-in">
-        {/* Goal Filter */}
         <div className="flex flex-wrap gap-2">
           {activeGoals.map((goal) => (
             <button
@@ -178,25 +134,6 @@ export default function ObjectivesView() {
             </button>
           ))}
         </div>
-
-        {/* Project Filter (Conditional) */}
-        {filterGoalId && activeProjectsForGoal.length > 0 && (
-          <div className="flex flex-wrap gap-2 pl-4 border-l-2 border-indigo-500/20 animate-slide-right">
-            {activeProjectsForGoal.map((proj) => (
-              <button
-                key={proj.id}
-                onClick={() => setFilterProjectId(proj.id)}
-                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${
-                  filterProjectId === proj.id 
-                    ? "bg-sky-500/20 border-sky-500 text-sky-400 shadow-lg shadow-sky-900/20" 
-                    : "bg-slate-900/30 border-white/5 text-slate-500 hover:border-white/10 hover:text-slate-400"
-                }`}
-              >
-                {proj.title}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="space-y-16">
@@ -224,7 +161,6 @@ export default function ObjectivesView() {
             </div>
           )}
         </section>
-
       </div>
 
       {selectedObjective && (
@@ -234,7 +170,7 @@ export default function ObjectivesView() {
             setIsEditModalOpen(false);
             setSelectedObjective(undefined);
           }}
-          projectId={selectedObjective.projectId}
+          goalId={selectedObjective.goalId}
           objectiveToEdit={selectedObjective}
         />
       )}

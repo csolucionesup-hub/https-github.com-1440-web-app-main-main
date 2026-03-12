@@ -5,38 +5,39 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, objectives, projects, goals, addActivity, logActivityExecution, userSettings } = useAppStore();
+  const { activities, objectives, goals, addActivity, logActivityExecution, userSettings } = useAppStore();
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
   const [newTitle, setNewTitle] = useState("");
   const [newMinutes, setNewMinutes] = useState(30);
   const [goalId, setGoalId] = useState("");
-  const [projectId, setProjectId] = useState("");
   const [objectiveId, setObjectiveId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const activeGoals = React.useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
+  const activeGoals = React.useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
   
-  // Initialize goalId if empty and goals are available
+  const activeObjectivesForGoal = React.useMemo(() => {
+    if (!goalId) return [];
+    return objectives.filter(o => o.goalId === goalId && (o.status === 'active' || o.status === 'in_progress' || o.status === 'pending'));
+  }, [objectives, goalId]);
+
+  // Default selection logic
   React.useEffect(() => {
     if (activeGoals.length > 0 && !goalId) {
       setGoalId(activeGoals[0].id);
     }
   }, [activeGoals, goalId]);
 
-  const activeProjectsForGoal = React.useMemo(() => {
-    if (!goalId) return [];
-    return projects.filter(p => p.goalId === goalId && (p.status === 'active' || p.status === 'in_progress'));
-  }, [projects, goalId]);
-
-  const activeObjectivesForProject = React.useMemo(() => {
-    if (!projectId) return [];
-    return objectives.filter(o => o.projectId === projectId && (o.status === 'active' || o.status === 'in_progress'));
-  }, [objectives, projectId]);
+  React.useEffect(() => {
+    if (activeObjectivesForGoal.length > 0 && (!objectiveId || !activeObjectivesForGoal.find(o => o.id === objectiveId))) {
+      setObjectiveId(activeObjectivesForGoal[0].id);
+    }
+  }, [activeObjectivesForGoal, objectiveId]);
 
   const availableForMetas = 1440 - sleepMinutes - routineMinutes;
   const remainingMinutes = availableForMetas - plannedMinutes;
+  
   const activeActivities = React.useMemo(
     () => activities.filter(a => a.status === 'active' || a.status === 'in_progress'),
     [activities]
@@ -63,9 +64,6 @@ export default function ActivitiesView() {
     if (success) {
       setNewTitle("");
       setNewMinutes(30);
-      setGoalId("");
-      setProjectId("");
-      setObjectiveId("");
     } else {
       setError("No tienes suficientes minutos libres (límite 1440 excedido)");
     }
@@ -125,13 +123,13 @@ export default function ActivitiesView() {
                     }}
                   />
                 </div>
+                
                 <div>
                   <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>1. Meta Fundamental</label>
                   <select
                     value={goalId}
                     onChange={(e) => {
                       setGoalId(e.target.value);
-                      setProjectId("");
                       setObjectiveId("");
                     }}
                     style={{
@@ -144,21 +142,18 @@ export default function ActivitiesView() {
                       outline: "none",
                     }}
                   >
-                    <option value="" style={{ background: "#1E293B", color: "#94A3B8" }}>Selecciona una meta...</option>
+                    <option value="">Selecciona meta...</option>
                     {activeGoals.map(g => (
-                      <option key={g.id} value={g.id} style={{ background: "#1E293B", color: "white" }}>{g.title}</option>
+                      <option key={g.id} value={g.id}>{g.title}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>2. Proyecto Asociado</label>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>2. Objetivo Táctico</label>
                   <select
-                    value={projectId}
-                    onChange={(e) => {
-                      setProjectId(e.target.value);
-                      setObjectiveId("");
-                    }}
+                    value={objectiveId}
+                    onChange={(e) => setObjectiveId(e.target.value)}
                     disabled={!goalId}
                     style={{
                       width: "100%",
@@ -170,35 +165,13 @@ export default function ActivitiesView() {
                       outline: "none",
                     }}
                   >
-                    <option value="" style={{ background: "#1E293B", color: "#94A3B8" }}>Selecciona un proyecto...</option>
-                    {activeProjectsForGoal.map(p => (
-                      <option key={p.id} value={p.id} style={{ background: "#1E293B", color: "white" }}>{p.title}</option>
+                    <option value="">Selecciona objetivo...</option>
+                    {activeObjectivesForGoal.map(obj => (
+                      <option key={obj.id} value={obj.id}>{obj.title}</option>
                     ))}
                   </select>
                 </div>
 
-                <div>
-                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>3. Objetivo Táctico</label>
-                  <select
-                    value={objectiveId}
-                    onChange={(e) => setObjectiveId(e.target.value)}
-                    disabled={!projectId}
-                    style={{
-                      width: "100%",
-                      background: projectId ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.01)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      padding: "10px 12px",
-                      color: projectId ? "white" : "#475569",
-                      outline: "none",
-                    }}
-                  >
-                    <option value="" style={{ background: "#1E293B", color: "#94A3B8" }}>Selecciona un objetivo...</option>
-                    {activeObjectivesForProject.map(obj => (
-                      <option key={obj.id} value={obj.id} style={{ background: "#1E293B", color: "white" }}>{obj.title}</option>
-                    ))}
-                  </select>
-                </div>
                 <div>
                   <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Minutos planificados</label>
                   <input

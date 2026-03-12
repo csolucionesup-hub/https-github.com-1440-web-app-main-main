@@ -169,7 +169,7 @@ export const tasksService = {
   mapObjective(db: any): Objective {
     return {
       id: db.id,
-      projectId: db.goal_id, // Map DB goal_id -> projectId
+      goalId: db.goal_id,
       title: db.title,
       description: db.description,
       status: db.status,
@@ -182,7 +182,7 @@ export const tasksService = {
   mapProject(db: any): Project {
     return {
       id: db.id,
-      goalId: db.objective_id, // Map DB objective_id -> goalId
+      objectiveId: db.objective_id,
       title: db.title,
       status: db.status,
       order: db.order_index,
