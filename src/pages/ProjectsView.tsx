@@ -2,29 +2,38 @@ import React, { useState, useMemo } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ProjectCard } from "../components/projects/ProjectCard";
 import { Plus, FolderKanban } from "lucide-react";
+import { CreateProjectModal } from "../components/projects/CreateProjectModal";
+import { Project } from "../types";
 
 export default function ProjectsView() {
-  const { objectives, projects, addProject } = useAppStore();
+  const { goals, projects, addProject } = useAppStore();
   
   const [name, setName] = useState("");
-  const [objectiveId, setObjectiveId] = useState("");
+  const [goalId, setGoalId] = useState("");
   const [period, setPeriod] = useState<'monthly' | 'quarterly' | 'semester'>('monthly');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
+  const [filterGoalId, setFilterGoalId] = useState<string>("all");
+
+  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active'), [goals]);
 
   const activeProjects = useMemo(
-    () => projects.filter((p) => p.status === "active" || p.status === "in_progress"),
-    [projects]
+    () => {
+      let filtered = projects.filter((p) => p.status === "active" || p.status === "in_progress");
+      if (filterGoalId !== "all") {
+        filtered = filtered.filter(p => p.goalId === filterGoalId);
+      }
+      return filtered;
+    },
+    [projects, filterGoalId]
   );
 
-  const bankProjects = useMemo(
-    () => projects.filter((p) => p.status !== "active" && p.status !== "in_progress"),
-    [projects]
-  );
 
   function handleAdd() {
-    if (!name.trim() || !objectiveId) return;
+    if (!name.trim() || !goalId) return;
     addProject({
       title: name,
-      objectiveId: objectiveId,
+      goalId: goalId,
       period: period
     });
     setName("");
@@ -60,16 +69,16 @@ export default function ProjectsView() {
 
         <div className="w-full md:w-64">
           <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] mb-3 ml-1">
-            Hito / Objetivo Relacionado
+            Meta Relacionada
           </label>
           <select
-            value={objectiveId}
-            onChange={(e) => setObjectiveId(e.target.value)}
+            value={goalId}
+            onChange={(e) => setGoalId(e.target.value)}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-sky-500/50 transition-all cursor-pointer"
           >
-            <option value="">Selecciona un objetivo</option>
-            {objectives.map(o => (
-              <option key={o.id} value={o.id}>{o.title}</option>
+            <option value="">Selecciona una meta</option>
+            {goals.map(g => (
+              <option key={g.id} value={g.id}>{g.title}</option>
             ))}
           </select>
         </div>
@@ -91,12 +100,39 @@ export default function ProjectsView() {
 
         <button
           onClick={handleAdd}
-          disabled={!name.trim() || !objectiveId}
+          disabled={!name.trim() || !goalId}
           className="h-[52px] bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold px-8 rounded-xl transition-all shadow-lg shadow-sky-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
         >
           <Plus size={20} />
           Agregar
         </button>
+      </div>
+
+      {/* Goal Filter Buttons */}
+      <div className="flex flex-wrap gap-2 mb-10 animate-fade-in">
+        <button
+          onClick={() => setFilterGoalId("all")}
+          className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+            filterGoalId === "all" 
+              ? "bg-sky-500/20 border-sky-500 text-sky-400 shadow-lg shadow-sky-900/20" 
+              : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
+          }`}
+        >
+          Todos los Proyectos
+        </button>
+        {activeGoals.map((goal) => (
+          <button
+            key={goal.id}
+            onClick={() => setFilterGoalId(goal.id)}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+              filterGoalId === goal.id 
+                ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
+                : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
+            }`}
+          >
+            {goal.title}
+          </button>
+        ))}
       </div>
 
       <div className="space-y-16">
@@ -112,26 +148,31 @@ export default function ProjectsView() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {activeProjects.map(proj => (
-                <ProjectCard key={proj.id} project={proj} />
+                <ProjectCard 
+                  key={proj.id} 
+                  project={proj} 
+                  onEdit={() => {
+                    setSelectedProject(proj);
+                    setIsEditModalOpen(true);
+                  }}
+                />
               ))}
             </div>
           )}
         </section>
 
-        {bankProjects.length > 0 && (
-          <section>
-            <h2 className="text-xl font-bold text-white/40 mb-8 flex items-center gap-3">
-               <div className="w-1.5 h-6 bg-slate-700 rounded-full" />
-               Archivo / Pausados
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-70">
-              {bankProjects.map(proj => (
-                <ProjectCard key={proj.id} project={proj} />
-              ))}
-            </div>
-          </section>
-        )}
       </div>
+      {selectedProject && (
+        <CreateProjectModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedProject(undefined);
+          }}
+          goalId={selectedProject.goalId}
+          projectToEdit={selectedProject}
+        />
+      )}
     </div>
   );}
 

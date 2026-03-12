@@ -6,11 +6,11 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    projectId: string;
+    activityId: string;
     taskToEdit?: Task;
 }
 
-export const CreateTaskModal = ({ isOpen, onClose, projectId, taskToEdit }: Props) => {
+export const CreateTaskModal = ({ isOpen, onClose, activityId, taskToEdit }: Props) => {
     const { addActionPlan, updateActionPlan } = useAppStore();
 
     const [title, setTitle] = useState('');
@@ -32,7 +32,7 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, taskToEdit }: Prop
         }
     }, [taskToEdit, isOpen]);
 
-    if (!isOpen || !projectId) return null;
+    if (!isOpen || !activityId) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,7 +47,7 @@ export const CreateTaskModal = ({ isOpen, onClose, projectId, taskToEdit }: Prop
             });
         } else {
             addActionPlan({
-                projectId,
+                activityId,
                 title,
                 description,
                 period,

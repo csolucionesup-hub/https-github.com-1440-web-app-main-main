@@ -56,33 +56,30 @@ interface AppState {
   toggleGoalStatus: (id: string) => Promise<void>;
 
   addProject: (project: Omit<Project, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<void>;
-  addObjective: (objective: Omit<Objective, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<void>;
-  addActivity: (activity: Omit<Activity, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<boolean>;
-  addActionPlan: (plan: Omit<Task, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<void>;
-  addWorkSession: (session: WorkSession) => void;
-  
-  logActivityExecution: (id: string, minutes: number) => Promise<{ success: boolean, message?: string }>;
-  updateSettings: (updates: Partial<AppState['userSettings']>) => { success: boolean, message?: string };
-
-  updateObjective: (id: string, updates: Partial<Objective>) => Promise<void>;
-  removeObjective: (id: string) => Promise<void>;
-  toggleObjectiveStatus: (id: string) => Promise<void>;
-
   updateProject: (id: string, updates: Partial<Project>) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
   toggleProjectStatus: (id: string) => Promise<void>;
 
+  addObjective: (objective: Omit<Objective, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<void>;
+  updateObjective: (id: string, updates: Partial<Objective>) => Promise<void>;
+  removeObjective: (id: string) => Promise<void>;
+  toggleObjectiveStatus: (id: string) => Promise<void>;
+
+  addActivity: (activity: Omit<Activity, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<boolean>;
   updateActivity: (id: string, updates: Partial<Activity>) => Promise<void>;
   removeActivity: (id: string) => Promise<void>;
   toggleActivityStatus: (id: string) => Promise<void>;
 
+  addActionPlan: (plan: Omit<Task, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<void>;
   updateActionPlan: (id: string, updates: Partial<Task>) => Promise<void>;
   removeActionPlan: (id: string) => Promise<void>;
+  addWorkSession: (session: WorkSession) => void;
 
   addQuote: (text: string) => void;
   updateQuote: (id: string, text: string) => void;
   removeQuote: (id: string) => void;
   clearReward: () => void;
+  logActivityExecution: (id: string, minutes: number) => Promise<{ success: boolean; message?: string }>;
   
   // Cloud Sync
   migrateLocalToSupabase: (userId: string) => Promise<void>;
@@ -98,7 +95,8 @@ interface AppState {
 }
 
 const MAX_ACTIVE_GOALS = 3;
-const MAX_ACTIVE_PROJECTS = 3;
+const MAX_TOTAL_GOALS = 6;
+const MAX_ACTIVE_PROJECTS_PER_GOAL = 3;
 const MAX_ACTIVE_OBJECTIVES = 6;
 const MAX_ACTIVE_ACTIVITIES = 10;
 const MAX_ACTIVE_ACTION_PLANS = 15;
@@ -161,7 +159,7 @@ export const useAppStore = create<AppState>()(
         };
       },
 
-      updateSettings: (updates) => {
+      updateSettings: (updates: Partial<AppState['userSettings']>) => {
         const newState = { ...get().userSettings, ...updates };
         
         if (newState.sleepMinutes + newState.routineMinutes > 1440) {
@@ -176,6 +174,11 @@ export const useAppStore = create<AppState>()(
       },
 
       addGoal: async (goal) => {
+        const totalGoals = get().goals.length;
+        if (totalGoals >= MAX_TOTAL_GOALS) {
+          // You could return an error here if preferred, but for now we'll just guard
+          return;
+        }
         const activeGoals = get().goals.filter((g) => g.status === "active").length;
         const tempId = crypto.randomUUID();
         const newGoal: Goal = {
@@ -198,7 +201,7 @@ export const useAppStore = create<AppState>()(
             const dbGoal = await goalsService.create(newGoal, session.user.id);
             set((state) => ({
               goals: state.goals.map(g => g.id === tempId ? dbGoal : g),
-              objectives: state.objectives.map(o => o.goalId === tempId ? { ...o, goalId: dbGoal.id } : o)
+              projects: state.projects.map(p => p.goalId === tempId ? { ...p, goalId: dbGoal.id } : p)
             }));
           } catch (error) {
             console.error("Cloud Error (addGoal):", error);
@@ -224,18 +227,18 @@ export const useAppStore = create<AppState>()(
       },
 
       removeGoal: async (id) => {
-        // Cascade removal following new hierarchy: Goal -> Objective -> Project -> Task -> Activity
-        const objectives = get().objectives.filter(o => o.goalId === id).map(o => o.id);
-        const projects = get().projects.filter(p => objectives.includes(p.objectiveId)).map(p => p.id);
-        const tasks = get().actionPlans.filter(t => projects.includes(t.projectId)).map(t => t.id);
-        const activities = get().activities.filter(a => tasks.includes(a.taskId)).map(a => a.id);
+        // Cascade removal: Goal -> Project -> Objective -> Activity -> Task
+        const projects = get().projects.filter(p => p.goalId === id).map(p => p.id);
+        const objectives = get().objectives.filter(o => projects.includes(o.projectId)).map(o => o.id);
+        const activities = get().activities.filter(a => objectives.includes(a.objectiveId)).map(a => a.id);
+        const tasks = get().actionPlans.filter(t => activities.includes(t.activityId)).map(t => t.id);
 
         set((state) => ({
           goals: state.goals.filter((g) => g.id !== id),
-          objectives: state.objectives.filter((o) => !objectives.includes(o.id)),
           projects: state.projects.filter((p) => !projects.includes(p.id)),
-          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
+          objectives: state.objectives.filter((o) => !objectives.includes(o.id)),
           activities: state.activities.filter((a) => !activities.includes(a.id)),
+          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
           workSessions: state.workSessions.filter((w) => !activities.includes(w.activityId)),
         }));
 
@@ -285,14 +288,16 @@ export const useAppStore = create<AppState>()(
       },
 
       addProject: async (project) => {
-        const active = get().projects.filter((p) => p.status === "active").length;
+        const activeInGoal = get().projects.filter(
+          (p) => p.goalId === project.goalId && (p.status === "active" || p.status === "in_progress")
+        ).length;
         const tempId = crypto.randomUUID();
         const newProject: Project = {
           ...project,
           id: tempId,
           createdAt: new Date().toISOString(),
-          order: get().projects.filter(p => p.objectiveId === project.objectiveId).length,
-          status: active < MAX_ACTIVE_PROJECTS ? "active" : "pending",
+          order: get().projects.filter(p => p.goalId === project.goalId).length,
+          status: activeInGoal < MAX_ACTIVE_PROJECTS_PER_GOAL ? "active" : "pending",
         };
 
         set((state) => ({
@@ -302,10 +307,10 @@ export const useAppStore = create<AppState>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            const dbProject = await tasksService.createProject(newProject, session.user.id, newProject.objectiveId);
+            const dbProject = await tasksService.createProject(newProject, session.user.id, newProject.goalId);
             set((state) => ({
               projects: state.projects.map(p => p.id === tempId ? dbProject : p),
-              actionPlans: state.actionPlans.map(t => t.projectId === tempId ? { ...t, projectId: dbProject.id } : t)
+              objectives: state.objectives.map(o => o.projectId === tempId ? { ...o, projectId: dbProject.id } : o)
             }));
           } catch (error) {
             console.error("Cloud Error (addProject):", error);
@@ -320,7 +325,7 @@ export const useAppStore = create<AppState>()(
           ...objective,
           id: tempId,
           createdAt: new Date().toISOString(),
-          order: get().objectives.filter(o => o.goalId === objective.goalId).length,
+          order: get().objectives.filter(o => o.projectId === objective.projectId).length,
           status: active < MAX_ACTIVE_OBJECTIVES ? "active" : "pending",
         };
 
@@ -331,10 +336,9 @@ export const useAppStore = create<AppState>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            const dbObj = await tasksService.createObjective(newObjective, session.user.id, newObjective.goalId);
+            const dbObj = await tasksService.createObjective(newObjective, session.user.id, newObjective.projectId);
             set((state) => ({
               objectives: state.objectives.map(o => o.id === tempId ? dbObj : o),
-              projects: state.projects.map(p => p.objectiveId === tempId ? { ...p, objectiveId: dbObj.id } : p),
               activities: state.activities.map(a => a.objectiveId === tempId ? { ...a, objectiveId: dbObj.id } : a)
             }));
           } catch (error) {
@@ -360,7 +364,7 @@ export const useAppStore = create<AppState>()(
           ...activity,
           id: tempId,
           createdAt: new Date().toISOString(),
-          order: state.activities.filter(a => a.taskId === activity.taskId).length,
+          order: state.activities.filter(a => a.objectiveId === activity.objectiveId).length,
           status: active < MAX_ACTIVE_ACTIVITIES ? "active" : "pending",
           minutesSpentToday: 0,
         };
@@ -372,21 +376,10 @@ export const useAppStore = create<AppState>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            // Find objectiveId from task hierarchy if not directly provided
-            let objId = newActivity.objectiveId;
-            if (!objId && newActivity.taskId) {
-              const task = state.actionPlans.find(t => t.id === newActivity.taskId);
-              if (task) {
-                const project = state.projects.find(p => p.id === task.projectId);
-                if (project) {
-                  objId = project.objectiveId;
-                }
-              }
-            }
-
-            const dbActivity = await tasksService.createActivity(newActivity, session.user.id, newActivity.taskId, objId);
+            const dbActivity = await tasksService.createActivity(newActivity, session.user.id, 'legacy_root', newActivity.objectiveId);
             set((state) => ({
-              activities: state.activities.map(a => a.id === tempId ? dbActivity : a)
+              activities: state.activities.map(a => a.id === tempId ? dbActivity : a),
+              actionPlans: state.actionPlans.map(t => t.activityId === tempId ? { ...t, activityId: dbActivity.id } : t)
             }));
           } catch (error) {
             console.error("Cloud Error (addActivity):", error);
@@ -396,7 +389,7 @@ export const useAppStore = create<AppState>()(
         return true;
       },
 
-      logActivityExecution: async (id, minutes) => {
+      logActivityExecution: async (id: string, minutes: number) => {
         const state = get();
         const activity = state.activities.find(a => a.id === id);
         
@@ -503,12 +496,12 @@ export const useAppStore = create<AppState>()(
         const active = get().actionPlans.filter((p) => p.status === "active").length;
         const tempId = crypto.randomUUID();
         const newPlan: Task = {
-          projectId: plan.projectId,
+          activityId: plan.activityId,
           title: plan.title,
           description: plan.description,
           period: plan.period,
           status: active < MAX_ACTIVE_ACTION_PLANS ? "active" : "pending",
-          order: get().actionPlans.filter(p => p.projectId === plan.projectId).length,
+          order: get().actionPlans.filter(p => p.activityId === plan.activityId).length,
           id: tempId,
           createdAt: new Date().toISOString(),
         };
@@ -520,10 +513,9 @@ export const useAppStore = create<AppState>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            const dbTask = await tasksService.createTask(newPlan, session.user.id, newPlan.projectId);
+            const dbTask = await tasksService.createTask(newPlan, session.user.id, newPlan.activityId);
             set((state) => ({
-              actionPlans: state.actionPlans.map(t => t.id === tempId ? dbTask : t),
-              activities: state.activities.map(a => a.taskId === tempId ? { ...a, taskId: dbTask.id } : a)
+              actionPlans: state.actionPlans.map(t => t.id === tempId ? dbTask : t)
             }));
           } catch (error) {
             console.error("Cloud Error (addActionPlan):", error);
@@ -546,16 +538,14 @@ export const useAppStore = create<AppState>()(
       },
 
       removeObjective: async (id) => {
-        const state = get();
-        const projects = state.projects.filter(p => p.objectiveId === id).map(p => p.id);
-        const tasks = state.actionPlans.filter(t => projects.includes(t.projectId)).map(t => t.id);
-        const activities = state.activities.filter(a => tasks.includes(a.taskId)).map(a => a.id);
+        const activities = get().activities.filter(a => a.objectiveId === id).map(a => a.id);
+        const tasks = get().actionPlans.filter(t => activities.includes(t.activityId)).map(t => t.id);
 
         set((state) => ({
           objectives: state.objectives.filter((o) => o.id !== id),
-          projects: state.projects.filter((p) => !projects.includes(p.id)),
-          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
           activities: state.activities.filter((a) => !activities.includes(a.id)),
+          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
+          workSessions: state.workSessions.filter((w) => !activities.includes(w.activityId)),
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -577,13 +567,35 @@ export const useAppStore = create<AppState>()(
       },
 
       updateProject: async (id, updates) => {
+        const state = get();
+        const currentProj = state.projects.find(p => p.id === id);
+        if (!currentProj) return;
+
+        let finalUpdates = { ...updates };
+
+        // Capacity validation: if changing status to active/in_progress
+        if (updates.status === 'active' || updates.status === 'in_progress') {
+          const goalId = updates.goalId || currentProj.goalId;
+          const activeInGoal = state.projects.filter(
+            p => p.id !== id && 
+                 p.goalId === goalId && 
+                 (p.status === 'active' || p.status === 'in_progress')
+          ).length;
+
+          if (activeInGoal >= MAX_ACTIVE_PROJECTS_PER_GOAL) {
+            // Force status to pending if limit reached
+            finalUpdates.status = 'pending';
+          }
+        }
+
         set((state) => ({
-          projects: state.projects.map((p) => p.id === id ? { ...p, ...updates } : p),
+          projects: state.projects.map((p) => p.id === id ? { ...p, ...finalUpdates } : p),
         }));
+
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           try {
-            await tasksService.updateProject(id, updates);
+            await tasksService.updateProject(id, finalUpdates);
           } catch (error) {
             console.error("Cloud Error (updateProject):", error);
           }
@@ -591,14 +603,16 @@ export const useAppStore = create<AppState>()(
       },
 
       removeProject: async (id) => {
-        const state = get();
-        const tasks = state.actionPlans.filter(t => t.projectId === id).map(t => t.id);
-        const activities = state.activities.filter(a => tasks.includes(a.taskId)).map(a => a.id);
+        const objectives = get().objectives.filter(o => o.projectId === id).map(o => o.id);
+        const activities = get().activities.filter(a => objectives.includes(a.objectiveId)).map(a => a.id);
+        const tasks = get().actionPlans.filter(t => activities.includes(t.activityId)).map(t => t.id);
 
         set((state) => ({
           projects: state.projects.filter((p) => p.id !== id),
-          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
+          objectives: state.objectives.filter((o) => !objectives.includes(o.id)),
           activities: state.activities.filter((a) => !activities.includes(a.id)),
+          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
+          workSessions: state.workSessions.filter((w) => !activities.includes(w.activityId)),
         }));
 
         const { data: { session } } = await supabase.auth.getSession();
@@ -614,8 +628,15 @@ export const useAppStore = create<AppState>()(
       toggleProjectStatus: async (id) => {
         const proj = get().projects.find(p => p.id === id);
         if (!proj) return;
-        const active = get().projects.filter(p => p.status === 'active').length;
-        const newStatus = proj.status === 'active' ? 'paused' : (active < MAX_ACTIVE_PROJECTS ? 'active' : 'pending');
+        
+        const activeInGoal = get().projects.filter(
+          p => p.goalId === proj.goalId && (p.status === 'active' || p.status === 'in_progress')
+        ).length;
+        
+        const newStatus = proj.status === 'active' 
+          ? 'paused' 
+          : (activeInGoal < MAX_ACTIVE_PROJECTS_PER_GOAL ? 'active' : 'pending');
+          
         await get().updateProject(id, { status: newStatus as EntityStatus });
       },
 
@@ -640,8 +661,11 @@ export const useAppStore = create<AppState>()(
       },
 
       removeActivity: async (id) => {
+        const tasks = get().actionPlans.filter(t => t.activityId === id).map(t => t.id);
         set((state) => ({
           activities: state.activities.filter((a) => a.id !== id),
+          actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
+          workSessions: state.workSessions.filter((w) => w.activityId !== id),
         }));
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -676,11 +700,8 @@ export const useAppStore = create<AppState>()(
       },
 
       removeActionPlan: async (id) => {
-        const state = get();
-        const activities = state.activities.filter(a => a.taskId === id).map(a => a.id);
         set((state) => ({
           actionPlans: state.actionPlans.filter((t) => t.id !== id),
-          activities: state.activities.filter((a) => !activities.includes(a.id)),
         }));
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
@@ -770,25 +791,25 @@ export const useAppStore = create<AppState>()(
           for (const goal of state.goals) {
             const dbGoal = await goalsService.create(goal, userId);
             
-            // Objectives for this goal
-            const goalObjectives = state.objectives.filter(o => o.goalId === goal.id);
-            for (const obj of goalObjectives) {
-              const dbObj = await tasksService.createObjective(obj, userId, dbGoal.id);
+            // Projects for this goal
+            const goalProjects = state.projects.filter(p => p.goalId === goal.id);
+            for (const proj of goalProjects) {
+              const dbProj = await tasksService.createProject(proj, userId, dbGoal.id);
               
-              // Projects for this objective
-              const objProjects = state.projects.filter(p => p.objectiveId === obj.id);
-              for (const proj of objProjects) {
-                const dbProj = await tasksService.createProject(proj, userId, dbObj.id);
+              // Objectives for this project
+              const projObjectives = state.objectives.filter(o => o.projectId === proj.id);
+              for (const obj of projObjectives) {
+                const dbObj = await tasksService.createObjective(obj, userId, dbProj.id);
                 
-                // Tasks for this project
-                const projTasks = state.actionPlans.filter(t => t.projectId === proj.id);
-                for (const taskItem of projTasks) {
-                  const dbTask = await tasksService.createTask(taskItem, userId, dbProj.id);
+                // Activities for this objective
+                const objActivities = state.activities.filter(a => a.objectiveId === obj.id);
+                for (const act of objActivities) {
+                  const dbAct = await tasksService.createActivity(act, userId, 'legacy_root', dbObj.id);
                   
-                  // Activities for this task
-                  const taskActivities = state.activities.filter(a => a.taskId === taskItem.id);
-                  for (const act of taskActivities) {
-                    await tasksService.createActivity(act, userId, dbTask.id, dbObj.id);
+                  // Tasks for this activity
+                  const actTasks = state.actionPlans.filter(t => t.activityId === act.id);
+                  for (const taskItem of actTasks) {
+                    await tasksService.createTask(taskItem, userId, dbAct.id);
                   }
                 }
               }

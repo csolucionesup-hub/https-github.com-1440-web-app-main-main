@@ -42,7 +42,7 @@ export interface AchievementState {
 
 export interface Objective {
   id: string;
-  goalId: string; // Belongs to Goal
+  projectId: string; // Belongs to Project
   title: string;
   description?: string;
   period: 'quarterly' | 'monthly' | 'bimonthly';
@@ -57,7 +57,7 @@ export interface Objective {
 
 export interface Project {
   id: string;
-  objectiveId: string; // Belongs to Objective
+  goalId: string; // Belongs to Goal
   title: string;
   description?: string;
   period: 'semester' | 'quarterly' | 'monthly';
@@ -70,9 +70,9 @@ export interface Project {
   createdAt: string;
 }
 
-export interface Task { // Action Plan
+export interface Task { // Tactical Task
   id: string;
-  projectId: string; // Belongs to Project
+  activityId: string; // Belongs to Activity
   title: string;
   description?: string;
   period: 'weekly' | 'daily';
@@ -87,8 +87,7 @@ export interface Task { // Action Plan
 
 export interface Activity {
   id: string;
-  taskId: string; // Belongs to Task
-  objectiveId?: string; // Direct link if needed for engine
+  objectiveId: string; // Belongs to Objective
   title: string;
   description?: string;
   period: 'monthly' | 'bimonthly' | 'weekly' | 'daily';

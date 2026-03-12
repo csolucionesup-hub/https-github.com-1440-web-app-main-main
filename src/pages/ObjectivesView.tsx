@@ -2,32 +2,41 @@ import React, { useState, useMemo } from "react";
 import { useAppStore } from "../store/useAppStore";
 import { ObjectiveCard } from "../components/objectives/ObjectiveCard";
 import { Plus, Target } from "lucide-react";
+import { CreateObjectiveModal } from "../components/objectives/CreateObjectiveModal";
+import { Objective } from "../types";
 
 export default function ObjectivesView() {
-  const { goals, objectives, addObjective } = useAppStore();
+  const { projects, objectives, addObjective } = useAppStore();
   
   const [name, setName] = useState("");
   const [goalId, setGoalId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [period, setPeriod] = useState<'quarterly' | 'monthly' | 'bimonthly'>('monthly');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedObjective, setSelectedObjective] = useState<Objective | undefined>(undefined);
+
+  const { goals } = useAppStore();
+
+  const filteredProjects = useMemo(() => {
+    if (!goalId) return [];
+    return projects.filter(p => p.goalId === goalId);
+  }, [projects, goalId]);
 
   const activeObjectives = useMemo(
     () => objectives.filter((o) => o.status === "active" || o.status === "in_progress"),
     [objectives]
   );
 
-  const bankObjectives = useMemo(
-    () => objectives.filter((o) => o.status !== "active" && o.status !== "in_progress"),
-    [objectives]
-  );
 
   function handleAdd() {
-    if (!name.trim() || !goalId) return;
+    if (!name.trim() || !projectId) return;
     addObjective({
       title: name,
-      goalId: goalId,
+      projectId: projectId,
       period: period
     });
     setName("");
+    // We keep goalId and projectId for potential batch entry if user prefers
   }
 
   return (
@@ -60,16 +69,36 @@ export default function ObjectivesView() {
 
         <div className="w-full md:w-64">
           <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-3 ml-1">
-            Asociar a Meta
+            1. Seleccionar Meta
           </label>
           <select
             value={goalId}
-            onChange={(e) => setGoalId(e.target.value)}
+            onChange={(e) => {
+              setGoalId(e.target.value);
+              setProjectId(""); // Reset project when goal changes
+            }}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer"
           >
             <option value="">Selecciona una meta</option>
             {goals.map(g => (
               <option key={g.id} value={g.id}>{g.title}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="w-full md:w-64">
+          <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em] mb-3 ml-1">
+            2. Asociar a Proyecto
+          </label>
+          <select
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            disabled={!goalId}
+            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-indigo-500/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">{goalId ? 'Selecciona un proyecto' : 'Primero elige una meta'}</option>
+            {filteredProjects.map(p => (
+              <option key={p.id} value={p.id}>{p.title}</option>
             ))}
           </select>
         </div>
@@ -91,7 +120,7 @@ export default function ObjectivesView() {
 
         <button
           onClick={handleAdd}
-          disabled={!name.trim() || !goalId}
+          disabled={!name.trim() || !projectId}
           className="h-[52px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold px-8 rounded-xl transition-all shadow-lg shadow-indigo-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
         >
           <Plus size={20} />
@@ -112,26 +141,32 @@ export default function ObjectivesView() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {activeObjectives.map(obj => (
-                <ObjectiveCard key={obj.id} objective={obj} />
+                <ObjectiveCard 
+                  key={obj.id} 
+                  objective={obj} 
+                  onEdit={() => {
+                    setSelectedObjective(obj);
+                    setIsEditModalOpen(true);
+                  }}
+                />
               ))}
             </div>
           )}
         </section>
 
-        {bankObjectives.length > 0 && (
-          <section>
-            <h2 className="text-xl font-bold text-white/40 mb-8 flex items-center gap-3">
-               <div className="w-1.5 h-6 bg-slate-700 rounded-full" />
-               Banco / Concluidos
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-70">
-              {bankObjectives.map(obj => (
-                <ObjectiveCard key={obj.id} objective={obj} />
-              ))}
-            </div>
-          </section>
-        )}
       </div>
+
+      {selectedObjective && (
+        <CreateObjectiveModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedObjective(undefined);
+          }}
+          projectId={selectedObjective.projectId}
+          objectiveToEdit={selectedObjective}
+        />
+      )}
     </div>
   );
 }

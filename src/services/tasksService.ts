@@ -8,12 +8,12 @@ export const tasksService = {
     if (error) throw error;
     return data.map(this.mapObjective);
   },
-  async createObjective(obj: Omit<Objective, 'id' | 'createdAt'>, userId: string, goalId: string) {
+  async createObjective(obj: Omit<Objective, 'id' | 'createdAt'>, userId: string, projectId: string) {
     const { data, error } = await supabase
       .from('objectives')
       .insert({ 
         user_id: userId,
-        goal_id: goalId,
+        goal_id: projectId, // Reusing goal_id slot for projectId in new hierarchy
         title: obj.title,
         description: obj.description,
         status: obj.status,
@@ -51,12 +51,12 @@ export const tasksService = {
     if (error) throw error;
     return data.map(this.mapProject);
   },
-  async createProject(proj: Omit<Project, 'id' | 'createdAt'>, userId: string, objectiveId: string) {
+  async createProject(proj: Omit<Project, 'id' | 'createdAt'>, userId: string, goalId: string) {
     const { data, error } = await supabase
       .from('projects')
       .insert({ 
         user_id: userId,
-        objective_id: objectiveId,
+        objective_id: goalId, // Reusing objective_id slot for goalId in new hierarchy
         title: proj.title,
         status: proj.status,
         order_index: proj.order
@@ -92,12 +92,12 @@ export const tasksService = {
     if (error) throw error;
     return data.map(this.mapTask);
   },
-  async createTask(task: Omit<Task, 'id' | 'createdAt'>, userId: string, projectId: string) {
+  async createTask(task: Omit<Task, 'id' | 'createdAt'>, userId: string, activityId: string) {
     const { data, error } = await supabase
       .from('tasks')
       .insert({ 
         user_id: userId,
-        project_id: projectId,
+        project_id: activityId, // Reusing project_id slot for activityId
         title: task.title,
         description: task.description,
         status: task.status,
@@ -137,12 +137,12 @@ export const tasksService = {
     if (error) throw error;
     return data.map((a: any) => this.mapActivity(a));
   },
-  async createActivity(activity: Omit<Activity, 'id' | 'createdAt'>, userId: string, taskId: string, objectiveId?: string) {
+  async createActivity(activity: Omit<Activity, 'id' | 'createdAt'>, userId: string, taskId: string | undefined, objectiveId: string) {
     const { data, error } = await supabase
       .from('activities')
       .insert({ 
         user_id: userId,
-        task_id: taskId,
+        task_id: taskId || null,
         objective_id: objectiveId,
         title: activity.title,
         planned_minutes: activity.plannedMinutesPerSession,
@@ -169,7 +169,7 @@ export const tasksService = {
   mapObjective(db: any): Objective {
     return {
       id: db.id,
-      goalId: db.goal_id,
+      projectId: db.goal_id, // Map DB goal_id -> projectId
       title: db.title,
       description: db.description,
       status: db.status,
@@ -182,7 +182,7 @@ export const tasksService = {
   mapProject(db: any): Project {
     return {
       id: db.id,
-      objectiveId: db.objective_id,
+      goalId: db.objective_id, // Map DB objective_id -> goalId
       title: db.title,
       status: db.status,
       order: db.order_index,
@@ -194,7 +194,7 @@ export const tasksService = {
   mapTask(db: any): Task {
     return {
       id: db.id,
-      projectId: db.project_id,
+      activityId: db.project_id, // Map DB project_id -> activityId
       title: db.title,
       description: db.description,
       status: db.status,
@@ -207,7 +207,6 @@ export const tasksService = {
   mapActivity(db: any): Activity {
     return {
       id: db.id,
-      taskId: db.task_id,
       objectiveId: db.objective_id,
       title: db.title,
       plannedMinutesPerSession: db.planned_minutes,

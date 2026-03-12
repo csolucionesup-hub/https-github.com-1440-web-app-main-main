@@ -14,8 +14,8 @@ export const getActivityStats = (activityId: string, workSessions: WorkSession[]
     return { planned, actual, progress: calculateProgress(planned, actual) };
 };
 
-export const getTaskStats = (taskId: string, activities: Activity[], workSessions: WorkSession[]) => {
-    const relatedActivities = activities.filter(a => a.taskId === taskId);
+export const getObjectiveStats = (objectiveId: string, activities: Activity[], workSessions: WorkSession[]) => {
+    const relatedActivities = activities.filter(a => a.objectiveId === objectiveId);
 
     let totalPlanned = 0;
     let totalActual = 0;
@@ -29,47 +29,37 @@ export const getTaskStats = (taskId: string, activities: Activity[], workSession
     return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
 };
 
-export const getProjectStats = (projectId: string, actionPlans: Task[], activities: Activity[], workSessions: WorkSession[]) => {
-    const relatedTasks = actionPlans.filter(t => t.projectId === projectId);
-
-    let totalPlanned = 0;
-    let totalActual = 0;
-
-    relatedTasks.forEach(task => {
-        const stats = getTaskStats(task.id, activities, workSessions);
-        totalPlanned += stats.planned;
-        totalActual += stats.actual;
-    });
-
-    return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
-};
-
-export const getObjectiveStats = (objectiveId: string, projects: Project[], actionPlans: Task[], activities: Activity[], workSessions: WorkSession[]) => {
-    const relatedProjects = projects.filter(p => p.objectiveId === objectiveId);
-
-    let totalPlanned = 0;
-    let totalActual = 0;
-
-    relatedProjects.forEach(proj => {
-        const stats = getProjectStats(proj.id, actionPlans, activities, workSessions);
-        totalPlanned += stats.planned;
-        totalActual += stats.actual;
-    });
-
-    return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
-};
-
-export const getGoalStats = (goalId: string, objectives: Objective[], projects: Project[], actionPlans: Task[], activities: Activity[], workSessions: WorkSession[]) => {
-    const relatedObjectives = objectives.filter(o => o.goalId === goalId);
+export const getProjectStats = (projectId: string, objectives: Objective[], activities: Activity[], workSessions: WorkSession[]) => {
+    const relatedObjectives = objectives.filter(o => o.projectId === projectId);
 
     let totalPlanned = 0;
     let totalActual = 0;
 
     relatedObjectives.forEach(obj => {
-        const stats = getObjectiveStats(obj.id, projects, actionPlans, activities, workSessions);
+        const stats = getObjectiveStats(obj.id, activities, workSessions);
         totalPlanned += stats.planned;
         totalActual += stats.actual;
     });
 
     return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
+};
+
+export const getGoalStats = (goalId: string, projects: Project[], objectives: Objective[], activities: Activity[], workSessions: WorkSession[]) => {
+    const relatedProjects = projects.filter(p => p.goalId === goalId);
+
+    let totalPlanned = 0;
+    let totalActual = 0;
+
+    relatedProjects.forEach(proj => {
+        const stats = getProjectStats(proj.id, objectives, activities, workSessions);
+        totalPlanned += stats.planned;
+        totalActual += stats.actual;
+    });
+
+    return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
+};
+
+// Task (Action Plan) stats if needed, though they are usually just TODOs
+export const getTaskStats = (taskId: string) => {
+    return { progress: 0 }; // Placeholder if needed by old components
 };

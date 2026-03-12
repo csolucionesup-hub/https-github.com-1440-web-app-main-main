@@ -14,14 +14,15 @@ const COLORS = ['#0ea5e9', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
     const { addGoal, updateGoal, goals } = useAppStore();
 
-    const activeGoalsCount = goals.filter(g => g.status === 'in_progress').length;
+    const activeGoalsCount = goals.filter(g => g.status === 'active').length;
     const isLimitReached = activeGoalsCount >= 3;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [motto, setMotto] = useState('');
     const [period, setPeriod] = useState<'annual' | 'quarterly'>('annual');
-    const [status, setStatus] = useState<EntityStatus>('in_progress');
+    const [status, setStatus] = useState<EntityStatus>('active');
+    const [category, setCategory] = useState('Negocio');
     const [color, setColor] = useState(COLORS[0]);
 
     useEffect(() => {
@@ -32,13 +33,15 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
             setPeriod(goalToEdit.period);
             setStatus(goalToEdit.status);
             setColor(goalToEdit.color);
+            setCategory(goalToEdit.category || 'Negocio');
         } else {
             setTitle('');
             setDescription('');
             setMotto('');
             setPeriod('annual');
-            setStatus(isLimitReached ? 'pending' : 'in_progress');
+            setStatus(isLimitReached ? 'pending' : 'active');
             setColor(COLORS[0]);
+            setCategory('Negocio');
         }
     }, [goalToEdit, isOpen, isLimitReached]);
 
@@ -56,13 +59,14 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                 period,
                 priority: 'high',
                 color,
-                motto
+                motto,
+                category
             });
         } else {
             addGoal({
                 title,
                 description,
-                category: 'Negocio', // Default category
+                category,
                 period,
                 priority: 'high',
                 color,
@@ -107,6 +111,20 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                         />
                     </div>
 
+                    <div>
+                        <label className="block text-sm font-semibold text-slate-300 mb-1.5">Categoría</label>
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
+                        >
+                            <option value="Negocio">Negocio</option>
+                            <option value="Salud">Salud</option>
+                            <option value="Espiritual">Espiritual</option>
+                            <option value="Personal">Personal</option>
+                        </select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-slate-300 mb-1.5">Periodo</label>
@@ -127,11 +145,11 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                                 className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                             >
                                 <option
-                                    value="in_progress"
+                                    value="active"
                                     className="bg-slate-900 text-white"
-                                    disabled={isLimitReached && (!goalToEdit || goalToEdit.status !== 'in_progress')}
+                                    disabled={isLimitReached && (!goalToEdit || goalToEdit.status !== 'active')}
                                 >
-                                    Activa (En progreso) {isLimitReached && (!goalToEdit || goalToEdit.status !== 'in_progress') && ' - Límite de 3 alcanzado'}
+                                    Activa (En progreso) {isLimitReached && (!goalToEdit || goalToEdit.status !== 'active') && ' - Límite de 3 alcanzado'}
                                 </option>
                                 <option value="paused" className="bg-slate-900 text-white">Pausada</option>
                                 <option value="completed" className="bg-slate-900 text-white">Terminada</option>

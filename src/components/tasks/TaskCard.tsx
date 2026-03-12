@@ -10,10 +10,12 @@ interface Props {
 }
 
 export const TaskCard = ({ task, onEdit }: Props) => {
-    const { updateActionPlan, removeActionPlan } = useAppStore();
+    const { updateActionPlan, removeActionPlan, activities } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    const parentActivity = activities.find(a => a.id === task.activityId);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -121,6 +123,13 @@ export const TaskCard = ({ task, onEdit }: Props) => {
                 </div>
             </div>
 
+            {parentActivity && (
+                <div className="flex items-center gap-2 mb-2 text-sky-400 font-medium text-[10px] uppercase tracking-wider">
+                    <CalendarDays className="w-3 h-3" />
+                    <span>Actividad: {parentActivity.title}</span>
+                </div>
+            )}
+
             <h3 className={`text-lg font-bold mb-2 leading-snug ${isCompleted ? 'line-through opacity-50' : 'text-white'}`}>
                 {task.title}
             </h3>
@@ -134,7 +143,7 @@ export const TaskCard = ({ task, onEdit }: Props) => {
             <div className="flex items-center gap-4 mt-auto border-t border-white/5 pt-4">
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <CalendarDays className="w-4 h-4 text-sky-500/80" />
-                    <span>{periodLabels[task.period]}</span>
+                    <span>{periodLabels[task.period as keyof typeof periodLabels] || task.period}</span>
                 </div>
             </div>
 

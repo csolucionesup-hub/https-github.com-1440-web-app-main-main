@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Goal } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { Flag, Clock, CalendarDays, MoreVertical, Edit2, TrendingUp } from 'lucide-react';
+import { Flag, Clock, CalendarDays, MoreVertical, Edit2, TrendingUp, Briefcase, Heart, Sparkles, User } from 'lucide-react';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
 import { getGoalStats } from '../../utils/progressAnalytics';
 
@@ -31,7 +31,8 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
   };
 
   const statusColors = {
-    in_progress: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+    active: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+    in_progress: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
     paused: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     completed_early: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
@@ -40,7 +41,8 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
 
   // Convert status to readable text
   const statusLabels = {
-    in_progress: 'Activa',
+    active: 'Activa',
+    in_progress: 'En Progreso',
     paused: 'Pausada',
     completed: 'Terminada',
     completed_early: 'Terminada Anticipada',
@@ -51,6 +53,23 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
   const isCompleted = goal.status === 'completed' || goal.status === 'completed_early';
   const stats = getGoalStats(goal.id, objectives, projects, actionPlans, activities, workSessions);
   const autoProgress = stats.progress;
+ 
+  const getCategoryInfo = (category: string) => {
+    switch (category) {
+      case 'Negocio':
+        return { icon: <Briefcase className="w-3.5 h-3.5" />, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+      case 'Salud':
+        return { icon: <Heart className="w-3.5 h-3.5" />, color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20' };
+      case 'Espiritual':
+        return { icon: <Sparkles className="w-3.5 h-3.5" />, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+      case 'Personal':
+        return { icon: <User className="w-3.5 h-3.5" />, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+      default:
+        return { icon: <Flag className="w-3.5 h-3.5" />, color: 'text-slate-400', bg: 'bg-slate-500/10', border: 'border-slate-500/20' };
+    }
+  };
+ 
+  const categoryInfo = getCategoryInfo(goal.category || '');
 
   return (
     <div className={`glass-card premium-border p-6 transition-all duration-300 relative group overflow-hidden ${isCompleted ? 'opacity-70' : ''}`} style={{ borderTop: `4px solid ${goal.color}`, borderRadius: 24 }}>
@@ -60,9 +79,16 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
       />
 
       <div className="flex justify-between items-start mb-6">
-        <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${statusColors[goal.status as keyof typeof statusColors] || statusColors.paused}`}>
-          {statusLabels[goal.status as keyof typeof statusLabels] || 'Futura'}
-        </span>
+        <div className="flex flex-wrap gap-2">
+          <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${statusColors[goal.status as keyof typeof statusColors] || statusColors.paused}`}>
+            {statusLabels[goal.status as keyof typeof statusLabels] || 'Futura'}
+          </span>
+          
+          <span className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border flex items-center gap-1.5 ${categoryInfo.bg} ${categoryInfo.color} ${categoryInfo.border}`}>
+            {categoryInfo.icon}
+            {goal.category || 'Sin Categoría'}
+          </span>
+        </div>
 
         <div className="relative" ref={menuRef}>
           <button
@@ -75,15 +101,15 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
           {/* Dropdown Menu */}
           {isMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 16 }}>
-              {goal.status !== 'in_progress' && (
+              {goal.status !== 'active' && (
                 <button
-                  onClick={() => { handleStatusChange('in_progress'); setIsMenuOpen(false); }}
+                  onClick={() => { handleStatusChange('active'); setIsMenuOpen(false); }}
                   className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
                 >
                   Activar Meta
                 </button>
               )}
-              {goal.status === 'in_progress' && (
+              {goal.status === 'active' && (
                 <button
                   onClick={() => { handleStatusChange('paused'); setIsMenuOpen(false); }}
                   className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"

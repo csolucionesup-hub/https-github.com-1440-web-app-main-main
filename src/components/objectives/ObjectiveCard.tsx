@@ -8,17 +8,18 @@ import { getObjectiveStats } from '../../utils/progressAnalytics';
 interface Props {
     objective: Objective;
     onEdit?: () => void;
+    onClick?: () => void;
 }
 
-export const ObjectiveCard = ({ objective, onEdit }: Props) => {
+export const ObjectiveCard = ({ objective, onEdit, onClick }: Props) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const { updateObjective, removeObjective, projects, actionPlans, activities, workSessions } = useAppStore();
+    const { updateObjective, removeObjective, projects, activities, workSessions } = useAppStore();
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const relatedProjects = projects.filter(p => p.objectiveId === objective.id);
+    const parentProject = projects.find(p => p.id === objective.projectId);
     const relatedActivities = activities.filter(a => a.objectiveId === objective.id);
-    const stats = getObjectiveStats(objective.id, projects, actionPlans, activities, workSessions);
+    const stats = getObjectiveStats(objective.id, activities, workSessions);
     const autoProgress = stats.progress;
 
     useEffect(() => {
@@ -68,7 +69,14 @@ export const ObjectiveCard = ({ objective, onEdit }: Props) => {
 
     return (
         <div
-            onClick={() => onEdit?.()}
+            onClick={(e) => {
+                if (onClick) {
+                    e.stopPropagation();
+                    onClick();
+                } else {
+                    onEdit?.();
+                }
+            }}
             className={`glass-card premium-border p-6 transition-all duration-300 relative cursor-pointer hover:border-indigo-500/50 ${isCompleted ? 'opacity-60' : ''}`}
             style={{ borderRadius: 24 }}
         >
@@ -87,15 +95,15 @@ export const ObjectiveCard = ({ objective, onEdit }: Props) => {
 
                     {isMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-52 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 14 }}>
-                            {objective.status !== 'in_progress' && (
+                            {objective.status !== 'active' && (
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('in_progress'); }}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('active'); }}
                                     className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors"
                                 >
-                                    Poner en Progreso
+                                    Activar Objetivo
                                 </button>
                             )}
-                            {objective.status === 'in_progress' && (
+                            {objective.status === 'active' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('paused'); }}
                                     className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/20 hover:text-amber-300 transition-colors border-b border-white/5"
@@ -128,6 +136,13 @@ export const ObjectiveCard = ({ objective, onEdit }: Props) => {
                 </div>
             </div>
 
+            {parentProject && (
+                <div className="flex items-center gap-2 mb-2 text-indigo-400 font-medium text-[10px] uppercase tracking-wider">
+                    <LayoutDashboard className="w-3 h-3" />
+                    <span>Proyecto: {parentProject.title}</span>
+                </div>
+            )}
+
             <h3 className={`text-xl font-bold mb-3 ${isCompleted ? 'line-through opacity-50' : 'text-white'}`}>
                 {objective.title}
             </h3>
@@ -154,11 +169,11 @@ export const ObjectiveCard = ({ objective, onEdit }: Props) => {
             <div className="flex items-center gap-6 mt-auto border-t border-white/5 pt-5">
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <CalendarDays className="w-4 h-4 text-purple-500/80" />
-                    <span>{periodLabels[objective.period]}</span>
+                    <span>{periodLabels[objective.period as keyof typeof periodLabels] || objective.period}</span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                    <LayoutDashboard className="w-4 h-4 text-emerald-500/80" />
-                    <span>{relatedProjects.length} Proyectos</span>
+                    <Clock className="w-4 h-4 text-emerald-500/80" />
+                    <span>{relatedActivities.length} Actividades</span>
                 </div>
             </div>
 

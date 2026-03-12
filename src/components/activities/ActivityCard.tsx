@@ -1,22 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Activity } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
-import { CalendarDays, MoreVertical, ListTodo } from 'lucide-react';
+import { CalendarDays, MoreVertical, Clock } from 'lucide-react';
 import { ConfirmDeleteModal } from '../ui/ConfirmDeleteModal';
 import { getActivityStats } from '../../utils/progressAnalytics';
 
 interface Props {
     activity: Activity;
     onEdit?: () => void;
+    onClick?: () => void;
 }
 
-export const ActivityCard = ({ activity, onEdit }: Props) => {
-    const { updateActivity, removeActivity, actionPlans, workSessions } = useAppStore();
+export const ActivityCard = ({ activity, onEdit, onClick }: Props) => {
+    const { updateActivity, removeActivity, objectives, actionPlans, workSessions } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const parentTask = actionPlans.find(t => t.id === activity.taskId);
+    const parentObjective = objectives.find(o => o.id === activity.objectiveId);
+    const relatedTasks = actionPlans.filter(t => t.activityId === activity.id);
     const stats = getActivityStats(activity.id, workSessions);
     const autoProgress = stats.progress;
 
@@ -68,7 +70,14 @@ export const ActivityCard = ({ activity, onEdit }: Props) => {
 
     return (
         <div
-            onClick={() => onEdit?.()}
+            onClick={(e) => {
+                if (onClick) {
+                    e.stopPropagation();
+                    onClick();
+                } else {
+                    onEdit?.();
+                }
+            }}
             className={`glass-card premium-border p-6 transition-all duration-300 relative cursor-pointer hover:border-purple-500/50 ${isCompleted ? 'opacity-60' : ''}`}
             style={{ borderRadius: 24 }}
         >
@@ -87,15 +96,15 @@ export const ActivityCard = ({ activity, onEdit }: Props) => {
 
                     {isMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-52 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 14 }}>
-                            {activity.status !== 'in_progress' && (
+                             {activity.status !== 'active' && (
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('in_progress'); }}
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('active'); }}
                                     className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-purple-500/10 hover:text-purple-300 transition-colors"
                                 >
-                                    Poner en Progreso
+                                    Activar Actividad
                                 </button>
                             )}
-                            {activity.status === 'in_progress' && (
+                            {activity.status === 'active' && (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('paused'); }}
                                     className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
@@ -128,6 +137,13 @@ export const ActivityCard = ({ activity, onEdit }: Props) => {
                 </div>
             </div>
 
+            {parentObjective && (
+                <div className="flex items-center gap-2 mb-2 text-purple-400 font-medium text-[10px] uppercase tracking-wider">
+                    <CalendarDays className="w-3 h-3" />
+                    <span>Objetivo: {parentObjective.title}</span>
+                </div>
+            )}
+
             <h3 className={`text-xl font-bold mb-3 ${isCompleted ? 'line-through opacity-50' : 'text-white'}`}>
                 {activity.title}
             </h3>
@@ -151,10 +167,16 @@ export const ActivityCard = ({ activity, onEdit }: Props) => {
                 </div>
             </div>
 
+            <div className="flex items-center gap-6 mt-auto border-t border-white/5 pt-5">
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                    <ListTodo className="w-4 h-4 text-pink-500/80" />
-                    <span>Tarea: {parentTask?.title || 'Sin tarea'}</span>
+                    <CalendarDays className="w-4 h-4 text-purple-500/80" />
+                    <span>En {relatedTasks.length} Tareas</span>
                 </div>
+                <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                    <Clock className="w-4 h-4 text-emerald-500/80" />
+                    <span>{activity.plannedMinutesPerSession} min/sesión</span>
+                </div>
+            </div>
 
             <ConfirmDeleteModal
                 isOpen={isDeleteModalOpen}

@@ -5,17 +5,21 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, actionPlans, projects, addActivity, logActivityExecution, userSettings } = useAppStore();
+  const { activities, objectives, addActivity, logActivityExecution, userSettings } = useAppStore();
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
   const [newTitle, setNewTitle] = useState("");
   const [newMinutes, setNewMinutes] = useState(30);
-  const [taskId, setTaskId] = useState("");
+  const [objectiveId, setObjectiveId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const availableForMetas = 1440 - sleepMinutes - routineMinutes;
   const remainingMinutes = availableForMetas - plannedMinutes;
+  const activeActivities = React.useMemo(
+    () => activities.filter(a => a.status === 'active' || a.status === 'in_progress'),
+    [activities]
+  );
 
   const handleAdd = async () => {
     setError(null);
@@ -23,20 +27,14 @@ export default function ActivitiesView() {
       setError("El título es obligatorio");
       return;
     }
-    if (!taskId) {
-      setError("Debes vincular esta actividad a una tarea del Plan de Acción");
+    if (!objectiveId) {
+      setError("Debes vincular esta actividad a un objetivo estratégico");
       return;
     }
     
-    // Find objectiveId from task -> project -> objective
-    const task = actionPlans.find(t => t.id === taskId);
-    const project = projects.find(p => p.id === task?.projectId);
-    const objectiveId = project?.objectiveId || "system-root";
-
     const success = await addActivity({
       title: newTitle,
       plannedMinutesPerSession: newMinutes,
-      taskId: taskId, 
       objectiveId: objectiveId, 
       period: 'daily',
     });
@@ -44,7 +42,7 @@ export default function ActivitiesView() {
     if (success) {
       setNewTitle("");
       setNewMinutes(30);
-      setTaskId("");
+      setObjectiveId("");
     } else {
       setError("No tienes suficientes minutos libres (límite 1440 excedido)");
     }
@@ -105,10 +103,10 @@ export default function ActivitiesView() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Vincular a Tarea (Plan de Acción)</label>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Vincular a Objetivo Estratégico</label>
                   <select
-                    value={taskId}
-                    onChange={(e) => setTaskId(e.target.value)}
+                    value={objectiveId}
+                    onChange={(e) => setObjectiveId(e.target.value)}
                     style={{
                       width: "100%",
                       background: "rgba(255,255,255,0.03)",
@@ -119,9 +117,9 @@ export default function ActivitiesView() {
                       outline: "none",
                     }}
                   >
-                    <option value="">Selecciona una tarea...</option>
-                    {actionPlans.map(task => (
-                      <option key={task.id} value={task.id}>{task.title}</option>
+                    <option value="">Selecciona un objetivo...</option>
+                    {objectives.map(obj => (
+                      <option key={obj.id} value={obj.id}>{obj.title}</option>
                     ))}
                   </select>
                 </div>
@@ -167,12 +165,12 @@ export default function ActivitiesView() {
 
           {/* Lista de Actividades */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {activities.length === 0 ? (
+            {activeActivities.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "#64748B", background: "rgba(255,255,255,0.02)", borderRadius: 18, border: "1px dashed rgba(255,255,255,0.1)" }}>
                 No hay actividades planificadas para hoy.
               </div>
             ) : (
-              activities.map((activity) => (
+              activeActivities.map((activity) => (
                 <div 
                   key={activity.id}
                   style={{

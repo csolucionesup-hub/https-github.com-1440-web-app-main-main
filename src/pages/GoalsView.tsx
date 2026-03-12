@@ -3,6 +3,7 @@ import { useAppStore } from "../store/useAppStore";
 import { Goal } from "../types";
 import { GoalCard } from "../components/goals/GoalCard";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
+import { CreateGoalModal } from "../components/goals/CreateGoalModal";
 
 export default function GoalsView() {
   const goals = useAppStore((state) => state.goals);
@@ -10,16 +11,14 @@ export default function GoalsView() {
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Negocio");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
 
   const activeGoals = useMemo(
     () => goals.filter((goal) => goal.status === "active"),
     [goals]
   );
 
-  const inactiveGoals = useMemo(
-    () => goals.filter((goal) => goal.status !== "active"),
-    [goals]
-  );
 
   function handleAddGoal() {
     if (!name.trim()) return;
@@ -85,42 +84,41 @@ export default function GoalsView() {
         </button>
       </div>
 
-      {activeGoals.length === 0 && inactiveGoals.length === 0 ? (
+      {activeGoals.length === 0 ? (
         <div className="glass-card premium-border p-12 text-center rounded-3xl">
-          <p className="text-slate-400 text-xl font-medium mb-2">No tienes metas creadas todavía.</p>
+          <p className="text-slate-400 text-xl font-medium mb-2">No tienes metas activas.</p>
           <p className="text-slate-500">Comienza definiendo una meta de Negocio, Salud o lo que sea hoy prioritario.</p>
         </div>
       ) : (
         <div className="space-y-12">
-          {activeGoals.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-                <div className="w-2 h-8 bg-indigo-500 rounded-full"></div>
-                Metas Activas
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {activeGoals.map((goal) => (
-                   <GoalCard key={goal.id} goal={goal} />
-                ))}
-              </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <div className="w-2 h-8 bg-indigo-500 rounded-full"></div>
+              Metas Activas
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {activeGoals.map((goal) => (
+                  <GoalCard 
+                    key={goal.id} 
+                    goal={goal} 
+                    onEdit={() => {
+                      setSelectedGoal(goal);
+                      setIsEditModalOpen(true);
+                    }}
+                  />
+              ))}
             </div>
-          )}
-          
-          {inactiveGoals.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-bold text-white/60 mb-6 flex items-center gap-3">
-                <div className="w-2 h-8 bg-slate-600 rounded-full"></div>
-                Otras Metas (Banco / Pausadas)
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {inactiveGoals.map((goal) => (
-                  <GoalCard key={goal.id} goal={goal} />
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
+      <CreateGoalModal 
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedGoal(undefined);
+        }}
+        goalToEdit={selectedGoal}
+      />
     </div>
   );
 }

@@ -4,10 +4,10 @@ import { TaskCard } from "../components/tasks/TaskCard";
 import { Plus, CheckSquare } from "lucide-react";
 
 export default function TasksView() {
-  const { projects, actionPlans, addActionPlan } = useAppStore();
+  const { activities, actionPlans, addActionPlan } = useAppStore();
   
   const [title, setTitle] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [activityId, setActivityId] = useState("");
   const [period, setPeriod] = useState<'daily' | 'weekly'>('daily');
 
   const activeTasks = useMemo(
@@ -15,16 +15,12 @@ export default function TasksView() {
     [actionPlans]
   );
 
-  const bankTasks = useMemo(
-    () => actionPlans.filter((t) => t.status !== "active" && t.status !== "in_progress"),
-    [actionPlans]
-  );
 
   function handleAdd() {
-    if (!title.trim() || !projectId) return;
+    if (!title.trim() || !activityId) return;
     addActionPlan({
       title: title,
-      projectId: projectId,
+      activityId: activityId,
       period: period
     });
     setTitle("");
@@ -60,16 +56,16 @@ export default function TasksView() {
 
         <div className="w-full md:w-64">
           <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-[0.2em] mb-3 ml-1">
-            Proyecto Relacionado
+            Actividad Relacionada
           </label>
           <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
+            value={activityId}
+            onChange={(e) => setActivityId(e.target.value)}
             className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-cyan-500/50 transition-all cursor-pointer"
           >
-            <option value="">Selecciona un proyecto</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.title}</option>
+            <option value="">Selecciona una actividad</option>
+            {activities.map(act => (
+              <option key={act.id} value={act.id}>{act.title}</option>
             ))}
           </select>
         </div>
@@ -90,7 +86,7 @@ export default function TasksView() {
 
         <button
           onClick={handleAdd}
-          disabled={!title.trim() || !projectId}
+          disabled={!title.trim() || !activityId}
           className="h-[52px] bg-gradient-to-r from-cyan-600 to-sky-600 hover:from-cyan-500 hover:to-sky-500 text-white font-bold px-8 rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
         >
           <Plus size={20} />
@@ -117,19 +113,6 @@ export default function TasksView() {
           )}
         </section>
 
-        {bankTasks.length > 0 && (
-          <section>
-            <h2 className="text-xl font-bold text-white/40 mb-8 flex items-center gap-3">
-               <div className="w-1.5 h-6 bg-slate-700 rounded-full" />
-               Banco / Pausadas
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-70">
-              {bankTasks.map(task => (
-                <TaskCard key={task.id} task={task} />
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </div>
   );

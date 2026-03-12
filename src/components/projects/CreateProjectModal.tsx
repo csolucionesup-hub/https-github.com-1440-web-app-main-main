@@ -6,14 +6,13 @@ import { X } from 'lucide-react';
 interface Props {
     isOpen: boolean;
     onClose: () => void;
-    objectiveId: string;
+    goalId: string;
     projectToEdit?: Project;
 }
 
-export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit }: Props) => {
+export const CreateProjectModal = ({ isOpen, onClose, goalId, projectToEdit }: Props) => {
     const { addProject, updateProject, projects } = useAppStore();
-
-    const relatedActiveCount = projects.filter(p => p.objectiveId === objectiveId && p.status === 'in_progress' && p.id !== projectToEdit?.id).length;
+    const relatedActiveCount = projects.filter(p => p.goalId === goalId && p.status === 'active' && p.id !== projectToEdit?.id).length;
     const isLimitReached = relatedActiveCount >= 6;
 
     const [title, setTitle] = useState('');
@@ -32,11 +31,11 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
             setTitle('');
             setDescription('');
             setPeriod('monthly');
-            setStatus(isLimitReached ? 'pending' : 'in_progress');
+            setStatus(isLimitReached ? 'pending' : 'active');
         }
     }, [projectToEdit, isOpen, isLimitReached]);
 
-    if (!isOpen || !objectiveId) return null;
+    if (!isOpen || !goalId) return null;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -50,7 +49,7 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
                 });
             } else {
                 addProject({
-                    objectiveId,
+                    goalId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
@@ -79,7 +78,7 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
                     {projectToEdit ? 'Editar Proyecto' : 'Crear Nuevo Proyecto'}
                 </h2>
 
-                {isLimitReached && (!projectToEdit || projectToEdit.status !== 'in_progress') && (
+                {isLimitReached && (!projectToEdit || projectToEdit.status !== 'active') && (
                     <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-2 text-sm text-amber-400">
                         <span className="shrink-0 mt-0.5">⚠️</span>
                         <p>
@@ -132,7 +131,7 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
                                 disabled={isLimitReached && status !== 'in_progress'}
                                 title={isLimitReached && status !== 'in_progress' ? "Límite de 6 activos alcanzado" : ""}
                             >
-                                <option value="in_progress" className="bg-slate-900 text-white" disabled={isLimitReached && status !== 'in_progress'}>Activo (En Progreso)</option>
+                                <option value="active" className="bg-slate-900 text-white" disabled={isLimitReached && status !== 'active'}>Activo</option>
                                 <option value="pending" className="bg-slate-900 text-white">Pendiente / Futuro</option>
                                 <option value="paused" className="bg-slate-900 text-white">Pausado</option>
                                 {projectToEdit && <option value="completed" className="bg-emerald-900 text-emerald-100">Completado</option>}

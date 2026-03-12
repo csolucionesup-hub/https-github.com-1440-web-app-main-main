@@ -8,16 +8,18 @@ import { getProjectStats } from '../../utils/progressAnalytics';
 interface Props {
     project: Project;
     onEdit?: () => void;
+    onClick?: () => void;
 }
 
-export const ProjectCard = ({ project, onEdit }: Props) => {
-    const { updateProject, removeProject, actionPlans, activities, workSessions } = useAppStore();
+export const ProjectCard = ({ project, onEdit, onClick }: Props) => {
+    const { goals, objectives, activities, workSessions, removeProject, updateProject } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const relatedTasks = actionPlans.filter(t => t.projectId === project.id);
-    const stats = getProjectStats(project.id, actionPlans, activities, workSessions); 
+    const parentGoal = goals.find(g => g.id === project.goalId);
+    const relatedObjectives = objectives.filter(o => o.projectId === project.id);
+    const stats = getProjectStats(project.id, objectives, activities, workSessions); 
     const autoProgress = stats.progress;
 
     useEffect(() => {
@@ -67,7 +69,14 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
 
     return (
         <div
-            onClick={() => onEdit?.()}
+            onClick={(e) => {
+                if (onClick) {
+                    e.stopPropagation();
+                    onClick();
+                } else {
+                    onEdit?.();
+                }
+            }}
             className={`glass-card premium-border p-6 transition-all duration-300 relative cursor-pointer hover:border-sky-500/50 ${isCompleted ? 'opacity-60' : ''}`}
             style={{ borderRadius: 24 }}
         >
@@ -127,6 +136,13 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
                 </div>
             </div>
 
+            {parentGoal && (
+                <div className="flex items-center gap-2 mb-2 text-sky-400 font-medium text-[10px] uppercase tracking-wider">
+                    <Target className="w-3 h-3" />
+                    <span>Meta: {parentGoal.title}</span>
+                </div>
+            )}
+
             <h3 className={`text-xl font-bold mb-3 ${isCompleted ? 'line-through opacity-50' : 'text-white'}`}>
                 {project.title}
             </h3>
@@ -153,11 +169,11 @@ export const ProjectCard = ({ project, onEdit }: Props) => {
             <div className="flex items-center gap-6 mt-auto border-t border-white/5 pt-5">
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <CalendarDays className="w-4 h-4 text-indigo-500/80" />
-                    <span>{periodLabels[project.period]}</span>
+                    <span>{periodLabels[project.period as keyof typeof periodLabels] || project.period}</span>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <Target className="w-4 h-4 text-emerald-500/80" />
-                    <span>{relatedTasks.length} Tareas</span>
+                    <span>{relatedObjectives.length} Objetivos</span>
                 </div>
             </div>
 
