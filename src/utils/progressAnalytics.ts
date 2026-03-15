@@ -30,28 +30,21 @@ export const getObjectiveStats = (objectiveId: string, activities: Activity[], w
 };
 
 export const getProjectStats = (projectId: string, objectives: Objective[], activities: Activity[], workSessions: WorkSession[]) => {
-    const relatedObjectives = objectives.filter(o => o.projectId === projectId);
+    // Project -> relates to objectives in this hierarchy? 
+    // Wait, in types.ts Project belongs to Objective: objectiveId.
+    // So getProjectStats for a Project ID:
+    const stats = getObjectiveStats(projectId, activities, workSessions); // If Project is synonymous with Objective in some views
+    return stats;
+};
+
+export const getGoalStats = (goalId: string, projects: Project[], objectives: Objective[], activities: Activity[], workSessions: WorkSession[]) => {
+    const relatedObjectives = objectives.filter(o => o.goalId === goalId);
 
     let totalPlanned = 0;
     let totalActual = 0;
 
     relatedObjectives.forEach(obj => {
         const stats = getObjectiveStats(obj.id, activities, workSessions);
-        totalPlanned += stats.planned;
-        totalActual += stats.actual;
-    });
-
-    return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
-};
-
-export const getGoalStats = (goalId: string, projects: Project[], objectives: Objective[], activities: Activity[], workSessions: WorkSession[]) => {
-    const relatedProjects = projects.filter(p => p.goalId === goalId);
-
-    let totalPlanned = 0;
-    let totalActual = 0;
-
-    relatedProjects.forEach(proj => {
-        const stats = getProjectStats(proj.id, objectives, activities, workSessions);
         totalPlanned += stats.planned;
         totalActual += stats.actual;
     });

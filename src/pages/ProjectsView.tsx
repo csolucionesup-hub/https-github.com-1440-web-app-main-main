@@ -15,10 +15,32 @@ export default function ProjectsView() {
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
   
   // Filter state
+  // Filter state
   const [filterGoalId, setFilterGoalId] = useState<string>("");
   const [filterObjectiveId, setFilterObjectiveId] = useState<string>("");
 
-  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
+  const activeWorkspaceId = useAppStore((state) => state.activeWorkspaceId);
+  const workspaces = useAppStore((state) => state.workspaces);
+  const activeGoals = useMemo(() => {
+    let filtered = goals.filter(g => g.status === 'active' || g.status === 'pending');
+    if (activeWorkspaceId) {
+        const personalWorkspace = workspaces.find(w => w.name === 'Personal');
+        const negociosWorkspace = workspaces.find(w => w.name === 'Negocios');
+
+        filtered = filtered.filter(g => {
+          if (g.workspaceId) return g.workspaceId === activeWorkspaceId;
+          
+          if (activeWorkspaceId === negociosWorkspace?.id) {
+            return g.category === 'Negocio';
+          }
+          if (activeWorkspaceId === personalWorkspace?.id) {
+            return g.category !== 'Negocio';
+          }
+          return false;
+        });
+    }
+    return filtered;
+  }, [goals, activeWorkspaceId, workspaces]);
 
   const objectivesForGoal = useMemo(() => {
     if (!filterGoalId) return [];
@@ -51,13 +73,17 @@ export default function ProjectsView() {
     [projects, filterObjectiveId]
   );
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!name.trim() || !objectiveId) return;
-    addProject({
+    const result = await addProject({
       title: name,
       objectiveId: objectiveId,
       period: period
     });
+    if (result && !result.success) {
+      alert(result.message);
+      return;
+    }
     setName("");
   }
 

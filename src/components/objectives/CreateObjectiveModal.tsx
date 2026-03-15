@@ -11,13 +11,18 @@ interface Props {
 }
 
 export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit }: Props) => {
-    const { addObjective, updateObjective, goals } = useAppStore();
+    const { addObjective, updateObjective, goals, objectives } = useAppStore();
 
     const [selectedGoalId, setSelectedGoalId] = useState(goalId || '');
+    
+    const relatedObjectives = objectives.filter(o => o.goalId === selectedGoalId);
+    const activeObjectivesCount = relatedObjectives.filter(o => (o.status === 'active' || o.status === 'in_progress') && o.id !== objectiveToEdit?.id).length;
+    const isLimitReached = activeObjectivesCount >= 3;
+    const isTotalLimitReached = relatedObjectives.length >= 6;
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [period, setPeriod] = useState<'quarterly' | 'bimonthly' | 'monthly'>('monthly');
-    const [status, setStatus] = useState<EntityStatus>('active');
+    const [status, setStatus] = useState<EntityStatus>(isLimitReached ? 'pending' : 'active');
 
     React.useEffect(() => {
         if (objectiveToEdit && isOpen) {
@@ -30,18 +35,24 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
             setTitle('');
             setDescription('');
             setPeriod('monthly');
-            setStatus('active');
+            setStatus(isLimitReached ? 'pending' : 'active');
             setSelectedGoalId(goalId || '');
         }
     }, [objectiveToEdit, isOpen, goalId]);
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const finalGoalId = selectedGoalId || goalId;
-        if (title.trim() && finalGoalId) {
-            if (objectiveToEdit) {
+        if (!title.trim() || !finalGoalId) return;
+
+        if (!objectiveToEdit && isTotalLimitReached) {
+            alert("Has alcanzado el límite de 6 objetivos para esta meta.");
+            return;
+        }
+
+        if (objectiveToEdit) {
                 updateObjective(objectiveToEdit.id, {
                     title: title.trim(),
                     description: description.trim(),
@@ -50,13 +61,16 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
                     goalId: finalGoalId
                 });
             } else {
-                addObjective({
+                const result = await addObjective({
                     goalId: finalGoalId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
                 });
-            }
+                if (result && !result.success) {
+                    alert(result.message);
+                    return;
+                }
             onClose();
         }
     };
@@ -131,7 +145,13 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
                                 onChange={(e) => setStatus(e.target.value as any)}
                                 className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
                             >
-                                <option value="active" className="bg-slate-900 text-white">Activo</option>
+                                <option 
+                                    value="active" 
+                                    className="bg-slate-900 text-white"
+                                    disabled={isLimitReached && (!objectiveToEdit || objectiveToEdit.status !== 'active')}
+                                >
+                                    Activo {isLimitReached && (!objectiveToEdit || objectiveToEdit.status !== 'active') && ' - Límite de 3 alcanzado'}
+                                </option>
                                 <option value="pending" className="bg-slate-900 text-white">Pendiente</option>
                                 <option value="paused" className="bg-slate-900 text-white">Pausado</option>
                                 {objectiveToEdit && <option value="completed" className="bg-emerald-900 text-emerald-100">Completado</option>}
@@ -149,9 +169,10 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
                         </button>
                         <button
                             type="submit"
-                            className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white px-5 py-2.5 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                            disabled={isTotalLimitReached && !objectiveToEdit}
+                            className={`bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white px-5 py-2.5 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] ${(isTotalLimitReached && !objectiveToEdit) ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                         >
-                            {objectiveToEdit ? 'Guardar Cambios' : 'Crear Objetivo'}
+                            {objectiveToEdit ? 'Guardar Cambios' : (isTotalLimitReached ? 'Límite de 6 alcanzado' : 'Crear Objetivo')}
                         </button>
                     </div>
                 </form>

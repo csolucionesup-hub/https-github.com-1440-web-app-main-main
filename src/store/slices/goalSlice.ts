@@ -6,7 +6,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { generateId } from "../../utils/uuid";
 
 const MAX_ACTIVE_GOALS = 3;
-const MAX_TOTAL_GOALS = 20;
+const MAX_TOTAL_GOALS = 6;
 
 export const createGoalSlice: StateCreator<
   AppState,
@@ -17,17 +17,41 @@ export const createGoalSlice: StateCreator<
   goals: [],
 
   addGoal: async (goal) => {
-    const totalGoals = get().goals.length;
-    if (totalGoals >= MAX_TOTAL_GOALS) return;
+    const activeWorkspaceId = get().activeWorkspaceId;
+    const isNegocioArea = goal.category === 'Negocio';
     
-    const activeGoals = get().goals.filter((g) => g.status === "active").length;
+    // Total goals check: Strictly 6 global
+    const totalCount = new Set(get().goals.map(g => g.id)).size;
+    if (totalCount >= MAX_TOTAL_GOALS) {
+      return { success: false, message: `Has alcanzado el límite global de ${MAX_TOTAL_GOALS} metas.` };
+    }
+
+    // Calculate total unique goals in the logical area (as seen in UI)
+    const areaGoals = get().goals.filter(g => {
+      // If goal has a workspace, check if it's the current one
+      if (activeWorkspaceId && g.workspaceId === activeWorkspaceId) return true;
+      
+      // OR if it's an orphan, check if its category matches the logical area of the current view
+      if (!g.workspaceId) {
+        const gIsNegocio = g.category === 'Negocio';
+        return isNegocioArea === gIsNegocio;
+      }
+      
+      return false;
+    });
+    
+    const uniqueAreaGoals = Array.from(new Map(areaGoals.map(g => [g.id, g])).values());
+    
+    const activeGoalsInArea = uniqueAreaGoals.filter(g => g.status === "active").length;
+
     const tempId = generateId();
     const newGoal: Goal = {
       ...goal,
       id: tempId,
+      workspaceId: activeWorkspaceId || goal.workspaceId,
       createdAt: new Date().toISOString(),
       category: goal.category || 'General',
-      status: activeGoals < MAX_ACTIVE_GOALS ? "active" : "pending",
+      status: activeGoalsInArea < MAX_ACTIVE_GOALS ? "active" : "pending",
       priority: goal.priority || 'medium',
       color: goal.color || '#06b6d4',
     };
@@ -48,6 +72,7 @@ export const createGoalSlice: StateCreator<
         console.error("Cloud Error (addGoal):", error);
       }
     }
+    return { success: true };
   },
 
   updateGoal: async (id, updates) => {
@@ -103,15 +128,34 @@ export const createGoalSlice: StateCreator<
   toggleGoalStatus: async (id) => {
     const state = get();
     const goal = state.goals.find(g => g.id === id);
-    if (!goal) return;
+    if (!goal) return { success: false, message: "Meta no encontrada" };
 
-    const activeGoalsCount = state.goals.filter((g) => g.status === "active").length;
+    const isNegocioArea = goal.category === 'Negocio';
+    const areaActiveGoals = state.goals.filter(g => {
+      if (g.status !== "active") return false;
+      
+      // Count goals in the target workspace (if any)
+      if (goal.workspaceId && g.workspaceId === goal.workspaceId) return true;
+      
+      // Count orphans that map to the same logical area
+      if (!g.workspaceId) {
+        const gIsNegocio = g.category === 'Negocio';
+        return isNegocioArea === gIsNegocio;
+      }
+      
+      return false;
+    });
+    const activeGoalsCount = new Set(areaActiveGoals.map(g => g.id)).size;
+
     let newStatus: EntityStatus = goal.status;
     
     if (goal.status === "active") {
       newStatus = "paused";
     } else if (goal.status === "paused" || goal.status === "pending") {
-      newStatus = activeGoalsCount >= MAX_ACTIVE_GOALS ? "pending" : "active";
+      if (activeGoalsCount >= MAX_ACTIVE_GOALS) {
+        return { success: false, message: `Ya tienes ${MAX_ACTIVE_GOALS} metas activas en esta área. Pausa una para activar esta.` };
+      }
+      newStatus = "active";
     }
 
     const updates = { 
@@ -133,5 +177,6 @@ export const createGoalSlice: StateCreator<
         console.error("Cloud Error (toggleGoalStatus):", error);
       }
     }
+    return { success: true };
   },
 });

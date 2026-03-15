@@ -14,8 +14,11 @@ const COLORS = ['#0ea5e9', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
 export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
     const { addGoal, updateGoal, goals } = useAppStore();
 
-    const activeGoalsCount = goals.filter(g => g.status === 'active').length;
+    const activeWorkspaceId = useAppStore.getState().activeWorkspaceId;
+    const workspaceGoals = goals.filter(g => g.workspaceId === activeWorkspaceId);
+    const activeGoalsCount = workspaceGoals.filter(g => g.status === 'active' && g.id !== goalToEdit?.id).length;
     const isLimitReached = activeGoalsCount >= 3;
+    const isTotalLimitReached = workspaceGoals.length >= 6;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -51,6 +54,11 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
         e.preventDefault();
         if (!title.trim()) return;
 
+        if (!goalToEdit && isTotalLimitReached) {
+            alert("Has alcanzado el límite global de 6 metas.");
+            return;
+        }
+
         if (goalToEdit) {
             updateGoal(goalToEdit.id, {
                 title,
@@ -70,7 +78,8 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                 period,
                 priority: 'high',
                 color,
-                motto
+                motto,
+                workspaceId: activeWorkspaceId || undefined
             });
         }
 
@@ -193,9 +202,10 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                         </button>
                         <button
                             type="submit"
-                            className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white px-5 py-2 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)]"
+                            disabled={isTotalLimitReached && !goalToEdit}
+                            className={`bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white px-5 py-2 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)] ${(isTotalLimitReached && !goalToEdit) ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                         >
-                            {goalToEdit ? 'Actualizar Meta' : 'Guardar Meta'}
+                            {goalToEdit ? 'Actualizar Meta' : (isTotalLimitReached ? 'Límite de 6 alcanzado' : 'Guardar Meta')}
                         </button>
                     </div>
                 </form>

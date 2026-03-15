@@ -51,7 +51,7 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
   };
 
   const isCompleted = goal.status === 'completed' || goal.status === 'completed_early';
-  const stats = getGoalStats(goal.id, objectives, projects, actionPlans, activities, workSessions);
+  const stats = getGoalStats(goal.id, projects, objectives, activities, workSessions);
   const autoProgress = stats.progress;
  
   const getCategoryInfo = (category: string) => {

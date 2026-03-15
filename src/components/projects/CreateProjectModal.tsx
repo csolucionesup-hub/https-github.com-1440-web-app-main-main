@@ -12,16 +12,18 @@ interface Props {
 
 export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit }: Props) => {
     const { addProject, updateProject, projects, objectives } = useAppStore();
-    
-    // Limits logic (Optional, keeping for stability)
-    const relatedActiveCount = projects.filter(p => p.objectiveId === objectiveId && p.status === 'active' && p.id !== projectToEdit?.id).length;
-    const isLimitReached = relatedActiveCount >= 6;
-
     const [selectedObjectiveId, setSelectedObjectiveId] = useState(objectiveId || '');
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [period, setPeriod] = useState<'semester' | 'quarterly' | 'monthly'>('monthly');
-    const [status, setStatus] = useState<EntityStatus>('active');
+
+    // Limits logic (6 total, 3 active)
+    const relatedProjects = projects.filter(p => p.objectiveId === selectedObjectiveId);
+    const relatedActiveCount = relatedProjects.filter(p => (p.status === 'active' || p.status === 'in_progress') && p.id !== projectToEdit?.id).length;
+    const isLimitReached = relatedActiveCount >= 3;
+    const isTotalLimitReached = relatedProjects.length >= 6;
+
+    const [status, setStatus] = useState<EntityStatus>(isLimitReached ? 'pending' : 'active');
 
     React.useEffect(() => {
         if (projectToEdit && isOpen) {
@@ -41,11 +43,17 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const finalObjectiveId = selectedObjectiveId || objectiveId;
-        if (title.trim() && finalObjectiveId) {
-            if (projectToEdit) {
+        if (!title.trim() || !finalObjectiveId) return;
+
+        if (!projectToEdit && isTotalLimitReached) {
+            alert("Has alcanzado el límite de 6 proyectos para este objetivo.");
+            return;
+        }
+
+        if (projectToEdit) {
                 updateProject(projectToEdit.id, {
                     title: title.trim(),
                     description: description.trim(),
@@ -54,13 +62,16 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
                     objectiveId: finalObjectiveId as any // Cast because of Partial type issues if any
                 });
             } else {
-                addProject({
+                const result = await addProject({
                     objectiveId: finalObjectiveId,
                     title: title.trim(),
                     description: description.trim(),
                     period,
                 });
-            }
+                if (result && !result.success) {
+                    alert(result.message);
+                    return;
+                }
             onClose();
         }
     };
@@ -135,7 +146,12 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
                                 onChange={(e) => setStatus(e.target.value as any)}
                                 className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
                             >
-                                <option value="active">Activo</option>
+                                <option 
+                                    value="active"
+                                    disabled={isLimitReached && (!projectToEdit || projectToEdit.status !== 'active')}
+                                >
+                                    Activo {isLimitReached && (!projectToEdit || projectToEdit.status !== 'active') && ' - Límite de 3 alcanzado'}
+                                </option>
                                 <option value="pending">Pendiente</option>
                                 <option value="paused">Pausado</option>
                                 {projectToEdit && <option value="completed">Completado</option>}
@@ -153,9 +169,10 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
                         </button>
                         <button
                             type="submit"
-                            className="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white px-5 py-2.5 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)]"
+                            disabled={isTotalLimitReached && !projectToEdit}
+                            className={`bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white px-5 py-2.5 text-sm rounded-xl font-medium transition-all shadow-[0_0_20px_rgba(14,165,233,0.3)] ${(isTotalLimitReached && !projectToEdit) ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
                         >
-                            {projectToEdit ? 'Guardar Cambios' : 'Crear Proyecto'}
+                            {projectToEdit ? 'Guardar Cambios' : (isTotalLimitReached ? 'Límite de 6 alcanzado' : 'Crear Proyecto')}
                         </button>
                     </div>
                 </form>

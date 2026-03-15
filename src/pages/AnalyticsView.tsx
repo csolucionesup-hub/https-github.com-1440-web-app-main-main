@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Card from "../components/ui/Card";
-import ProgressBar from "../components/ui/ProgressBar";
 import WeeklyTrendChart from "../components/ui/WeeklyTrendChart";
 import { analyticsService } from "../services/analyticsService";
 import { useAuth } from "../contexts/AuthContext";
-import { Activity as ActivityIcon, PieChart, TrendingUp, Zap } from "lucide-react";
+import { useAppStore } from "../store/useAppStore";
+import { Activity as ActivityIcon, TrendingUp, Zap } from "lucide-react";
 
 interface AnalyticsData {
   weeklyTrend: any[];
@@ -23,6 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function AnalyticsView() {
   const { user } = useAuth();
+  const { activeWorkspaceId, goals } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>({
     weeklyTrend: [],
@@ -39,6 +40,16 @@ export default function AnalyticsView() {
           analyticsService.getTimeDistributionByCategory(user.id)
         ]);
 
+        // Filter logs by active workspace
+        const workspaceGoalIds = goals
+          .filter(g => g.workspaceId === activeWorkspaceId)
+          .map(g => g.id);
+
+        const filteredLogs = logs.filter((log: any) => {
+          const goalId = log.activities?.objectives?.goal_id || log.activities?.objectives?.goals?.id;
+          return workspaceGoalIds.includes(goalId);
+        });
+
         // Process Weekly Trend
         const weekly = snapshots.map((s: any) => ({
           day: new Date(s.date).toLocaleDateString('es-ES', { weekday: 'short' }),
@@ -48,8 +59,8 @@ export default function AnalyticsView() {
 
         // Process Category Distribution
         const distMap: Record<string, number> = {};
-        logs.forEach((log: any) => {
-          const cat = log.activities?.objectives?.goals?.category || "General";
+        filteredLogs.forEach((log: any) => {
+          const cat = log.activities?.objectives?.goals?.category || log.activities?.objectives?.category || "General";
           distMap[cat] = (distMap[cat] || 0) + (log.minutes || 0);
         });
 
@@ -59,7 +70,7 @@ export default function AnalyticsView() {
           color: CATEGORY_COLORS[category] || CATEGORY_COLORS.General
         })).sort((a, b) => b.minutes - a.minutes);
 
-        // Calculate Efficiency (Average % executed vs planned of the week)
+        // Calculate Efficiency
         const totalPlanned = snapshots.reduce((acc, s) => acc + (s.total_planned || 0), 0);
         const totalExecuted = snapshots.reduce((acc, s) => acc + (s.total_executed || 0), 0);
         const score = totalPlanned > 0 ? Math.round((totalExecuted / totalPlanned) * 100) : 0;
@@ -77,7 +88,7 @@ export default function AnalyticsView() {
     }
 
     loadAnalytics();
-  }, [user]);
+  }, [user, activeWorkspaceId, goals]);
 
   if (loading) {
     return (

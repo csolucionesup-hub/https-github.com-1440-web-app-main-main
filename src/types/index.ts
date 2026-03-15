@@ -8,6 +8,15 @@ export type EntityStatus =
   | 'overdue'
   | 'archived';
 
+export interface Workspace {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  icon?: string;
+  createdAt: string;
+}
+
 export interface Goal {
   id: string;
   title: string;
@@ -24,6 +33,7 @@ export interface Goal {
   affirmation?: string;
   completedAt?: string;
   createdAt: string;
+  workspaceId?: string;
 }
 
 export interface UserQuote {
@@ -119,7 +129,14 @@ export interface WorkSession {
   notes?: string;
 }
 
+export interface RoutineItem {
+  id: string;
+  name: string;
+  minutes: number;
+}
+
 export interface DailySettings {
   sleepMinutes: number; // e.g. 480 (8 hrs)
-  fixedRoutineMinutes: number; // e.g. 120 (meals, transport)
+  routineMinutes: number; // Deprecated or kept for backwards compatibility/total
+  routines?: RoutineItem[];
 }

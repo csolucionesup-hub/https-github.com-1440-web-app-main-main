@@ -15,8 +15,10 @@ import { analyticsService } from "../../services/analyticsService";
 import { supabase } from "../../lib/supabaseClient";
 import { generateId } from "../../utils/uuid";
 
-const MAX_ACTIVE_PROJECTS_PER_GOAL = 3;
-const MAX_ACTIVE_OBJECTIVES_PER_PROJECT = 3;
+const MAX_ACTIVE_PROJECTS_PER_OBJECTIVE = 3;
+const MAX_TOTAL_PROJECTS_PER_OBJECTIVE = 6;
+const MAX_ACTIVE_OBJECTIVES_PER_GOAL = 3;
+const MAX_TOTAL_OBJECTIVES_PER_GOAL = 6;
 const MAX_ACTIVE_ACTIVITIES = 10;
 const MAX_ACTIVE_ACTION_PLANS = 15;
 
@@ -34,16 +36,30 @@ export const createProductivitySlice: StateCreator<
   userSettings: {
     sleepMinutes: 480,
     routineMinutes: 120,
+    routines: [
+      { id: 'r1', name: 'Desayuno', minutes: 30 },
+      { id: 'r2', name: 'Almuerzo', minutes: 60 },
+      { id: 'r3', name: 'Traslado', minutes: 30 },
+    ]
   },
 
   addProject: async (project) => {
-    const activeInObj = get().projects.filter(p => p.objectiveId === project.objectiveId && (p.status === "active" || p.status === "in_progress")).length;
+    const allInObj = get().projects.filter(p => p.objectiveId === project.objectiveId);
+    
+    // Deduplicate to ignore store pollution
+    const uniqueInObj = Array.from(new Map(allInObj.map(p => [p.id, p])).values());
+    
+    if (uniqueInObj.length >= MAX_TOTAL_PROJECTS_PER_OBJECTIVE) {
+      return { success: false, message: `Has alcanzado el límite de ${MAX_TOTAL_PROJECTS_PER_OBJECTIVE} proyectos para este objetivo.` };
+    }
+
+    const activeInObj = uniqueInObj.filter(p => (p.status === "active" || (p.status as string) === "in_progress")).length;
     const tempId = generateId();
     const newProject: Project = {
       ...project,
       id: tempId,
       createdAt: new Date().toISOString(),
-      status: activeInObj < MAX_ACTIVE_PROJECTS_PER_GOAL ? "active" : "pending",
+      status: activeInObj < MAX_ACTIVE_PROJECTS_PER_OBJECTIVE ? "active" : "pending",
       order: get().projects.length
     };
 
@@ -59,6 +75,7 @@ export const createProductivitySlice: StateCreator<
         }));
       } catch (error) { console.error("Cloud Error (addProject):", error); }
     }
+    return { success: true };
   },
 
   updateProject: async (id, updates) => {
@@ -76,8 +93,6 @@ export const createProductivitySlice: StateCreator<
   },
 
   removeProject: async (id) => {
-    const actionPlans = get().actionPlans.filter(t => t.activityId === id).map(t => t.id);
-    
     set((state) => ({
       projects: state.projects.filter((p) => p.id !== id),
       actionPlans: state.actionPlans.filter((t) => t.activityId !== id),
@@ -92,19 +107,45 @@ export const createProductivitySlice: StateCreator<
 
   toggleProjectStatus: async (id) => {
     const project = get().projects.find((p) => p.id === id);
-    if (!project) return;
-    const newStatus: EntityStatus = project.status === "active" ? "pending" : "active";
+    if (!project) return { success: false, message: "Proyecto no encontrado" };
+    
+    let newStatus: EntityStatus;
+    if (project.status === "active" || (project.status as string) === "in_progress") {
+      newStatus = "paused";
+    } else {
+      const activeInObj = get().projects.filter(p => 
+        p.objectiveId === project.objectiveId && 
+        (p.status === "active" || (p.status as string) === "in_progress")
+      );
+      const activeCount = new Set(activeInObj.map(p => p.id)).size;
+      
+      if (activeCount >= MAX_ACTIVE_PROJECTS_PER_OBJECTIVE) {
+        return { success: false, message: `Ya tienes ${MAX_ACTIVE_PROJECTS_PER_OBJECTIVE} proyectos activos para este objetivo. Pausa uno para activar este.` };
+      }
+      newStatus = "active";
+    }
+    
     await get().updateProject(id, { status: newStatus });
+    return { success: true };
   },
 
   addObjective: async (objective) => {
-    const activeInGoal = get().objectives.filter(o => o.goalId === objective.goalId && (o.status === "active" || o.status === "in_progress")).length;
+    const allInGoal = get().objectives.filter(o => o.goalId === objective.goalId);
+    
+    // Deduplicate to ignore store pollution
+    const uniqueInGoal = Array.from(new Map(allInGoal.map(o => [o.id, o])).values());
+    
+    if (uniqueInGoal.length >= MAX_TOTAL_OBJECTIVES_PER_GOAL) {
+      return { success: false, message: `Has alcanzado el límite de ${MAX_TOTAL_OBJECTIVES_PER_GOAL} objetivos para esta meta.` };
+    }
+
+    const activeInGoal = uniqueInGoal.filter(o => (o.status === "active" || (o.status as string) === "in_progress")).length;
     const tempId = generateId();
     const newObjective: Objective = {
       ...objective,
       id: tempId,
       createdAt: new Date().toISOString(),
-      status: activeInGoal < MAX_ACTIVE_OBJECTIVES_PER_PROJECT ? "active" : "pending",
+      status: activeInGoal < MAX_ACTIVE_OBJECTIVES_PER_GOAL ? "active" : "pending",
       order: get().objectives.length
     };
 
@@ -121,6 +162,7 @@ export const createProductivitySlice: StateCreator<
         }));
       } catch (error) { console.error("Cloud Error (addObjective):", error); }
     }
+    return { success: true };
   },
 
   updateObjective: async (id, updates) => {
@@ -159,9 +201,27 @@ export const createProductivitySlice: StateCreator<
 
   toggleObjectiveStatus: async (id) => {
     const objective = get().objectives.find((o) => o.id === id);
-    if (!objective) return;
-    const newStatus: EntityStatus = objective.status === "active" ? "pending" : "active";
+    if (!objective) return { success: false, message: "Objetivo no encontrado" };
+    
+    let newStatus: EntityStatus;
+    if (objective.status === "active" || (objective.status as string) === "in_progress") {
+      newStatus = "paused";
+    } else {
+      const activeInGoal = get().objectives.filter(o => 
+        o.goalId === objective.goalId && 
+        (o.status === "active" || (o.status as string) === "in_progress")
+      );
+      // Deduplicate by ID
+      const activeCount = new Set(activeInGoal.map(o => o.id)).size;
+      
+      if (activeCount >= MAX_ACTIVE_OBJECTIVES_PER_GOAL) {
+        return { success: false, message: `Ya tienes ${MAX_ACTIVE_OBJECTIVES_PER_GOAL} objetivos activos para esta meta. Pausa uno para activar este.` };
+      }
+      newStatus = "active";
+    }
+    
     await get().updateObjective(id, { status: newStatus });
+    return { success: true };
   },
 
   addActivity: async (activity) => {
@@ -185,8 +245,6 @@ export const createProductivitySlice: StateCreator<
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       try {
-        const objective = get().objectives.find(o => o.id === newActivity.objectiveId);
-        const parentProjectId = objective?.goalId || '00000000-0000-0000-0000-000000000000';
         const dbActivity = await tasksService.createActivity(newActivity, session.user.id, null, newActivity.objectiveId);
         set((state) => ({
           activities: state.activities.map(a => a.id === tempId ? dbActivity : a),
@@ -198,6 +256,19 @@ export const createProductivitySlice: StateCreator<
   },
 
   updateActivity: async (id, updates) => {
+    if (updates.plannedMinutesPerSession !== undefined) {
+      const state = get();
+      const activity = state.activities.find(a => a.id === id);
+      if (activity) {
+        const otherPlanned = state.getDailyMetrics().plannedMinutes - (activity.plannedMinutesPerSession || 0);
+        const totalWithUpdate = state.userSettings.sleepMinutes + state.userSettings.routineMinutes + otherPlanned + updates.plannedMinutesPerSession;
+        
+        if (totalWithUpdate > 1440) {
+          return { success: false, message: "No puedes exceder los 1440 minutos totales del día." };
+        }
+      }
+    }
+
     set((state) => ({
       activities: state.activities.map((a) =>
         a.id === id ? { ...a, ...updates, statusUpdatedAt: new Date().toISOString() } : a
@@ -209,6 +280,7 @@ export const createProductivitySlice: StateCreator<
       try { await tasksService.updateActivity(id, updates); }
       catch (error) { console.error("Cloud Error (updateActivity):", error); }
     }
+    return { success: true };
   },
 
   removeActivity: async (id) => {
@@ -316,7 +388,62 @@ export const createProductivitySlice: StateCreator<
     set((state) => ({ workSessions: [...state.workSessions, session] }));
   },
 
+  addRoutine: (name, minutes) => {
+    const id = generateId();
+    const current = get().userSettings;
+    const routines = current.routines || [];
+    const newRoutines = [...routines, { id, name, minutes }];
+    const totalRoutineMinutes = newRoutines.reduce((acc, r) => acc + r.minutes, 0);
+    
+    set((state) => ({
+      userSettings: {
+        ...state.userSettings,
+        routines: newRoutines,
+        routineMinutes: totalRoutineMinutes
+      }
+    }));
+  },
+
+  updateRoutine: (id, updates) => {
+    const current = get().userSettings;
+    const routines = current.routines || [];
+    const newRoutines = routines.map(r => r.id === id ? { ...r, ...updates } : r);
+    const totalRoutineMinutes = newRoutines.reduce((acc, r) => acc + r.minutes, 0);
+    
+    set((state) => ({
+      userSettings: {
+        ...state.userSettings,
+        routines: newRoutines,
+        routineMinutes: totalRoutineMinutes
+      }
+    }));
+  },
+
+  removeRoutine: (id) => {
+    const current = get().userSettings;
+    const routines = current.routines || [];
+    const newRoutines = routines.filter(r => r.id !== id);
+    const totalRoutineMinutes = newRoutines.reduce((acc, r) => acc + r.minutes, 0);
+    
+    set((state) => ({
+      userSettings: {
+        ...state.userSettings,
+        routines: newRoutines,
+        routineMinutes: totalRoutineMinutes
+      }
+    }));
+  },
+
   updateSettings: (updates) => {
+    const current = get().userSettings;
+    const newSleep = updates.sleepMinutes !== undefined ? updates.sleepMinutes : current.sleepMinutes;
+    const newRoutine = updates.routineMinutes !== undefined ? updates.routineMinutes : current.routineMinutes;
+    
+    const planned = get().getDailyMetrics().plannedMinutes;
+    if (newSleep + newRoutine + planned > 1440) {
+      return { success: false, message: "El tiempo total (Sueño + Rutina + Planeado) excede los 1440 minutos." };
+    }
+
     set((state) => ({
       userSettings: { ...state.userSettings, ...updates }
     }));
@@ -324,8 +451,8 @@ export const createProductivitySlice: StateCreator<
     const { data: { session } } = supabase.auth.getSession() as any;
     if (session) {
       profilesService.updateProfile(session.user.id, {
-        sleep_minutes: updates.sleepMinutes,
-        routine_minutes: (updates as any).routineMinutes
+        sleep_minutes: newSleep,
+        routine_minutes: newRoutine
       }).catch(err => console.error("Cloud Error (updateSettings):", err));
     }
 
@@ -334,11 +461,28 @@ export const createProductivitySlice: StateCreator<
 
   getDailyMetrics: () => {
     const state = get();
-    const plannedMinutes = state.activities
-      .filter(a => a.status === 'active' || a.status === 'in_progress')
+    const activeWorkspaceId = state.activeWorkspaceId;
+    
+    // Get goals belonging to active workspace
+    const workspaceGoalIds = state.goals
+      .filter(g => g.workspaceId === activeWorkspaceId)
+      .map(g => g.id);
+
+    // Get objectives belonging to those goals
+    const workspaceObjectiveIds = state.objectives
+      .filter(o => workspaceGoalIds.includes(o.goalId))
+      .map(o => o.id);
+
+    // Filter activities that belong to this workspace
+    const workspaceActivities = state.activities.filter(a => 
+      workspaceObjectiveIds.includes(a.objectiveId)
+    );
+
+    const plannedMinutes = workspaceActivities
+      .filter(a => a.status === 'active' || (a.status as string) === 'in_progress')
       .reduce((acc, a) => acc + (a.plannedMinutesPerSession || 0), 0);
 
-    const executedMinutes = state.activities.reduce((acc, a) => acc + (a.minutesSpentToday || 0), 0);
+    const executedMinutes = workspaceActivities.reduce((acc, a) => acc + (a.minutesSpentToday || 0), 0);
     const totalProductiveMinutes = 1440 - state.userSettings.sleepMinutes - state.userSettings.routineMinutes;
     const freeMinutes = totalProductiveMinutes - plannedMinutes;
     const alignmentPercent = plannedMinutes > 0 ? Math.round((executedMinutes / plannedMinutes) * 100) : 0;
@@ -367,27 +511,25 @@ export const createProductivitySlice: StateCreator<
         tasksService.getActivities()
       ]);
 
-      if (profile) {
-        set({
-          userSettings: {
-            sleepMinutes: profile.sleep_minutes,
-            routineMinutes: profile.routine_minutes
-          },
-          achievements: {
-            stars: profile.stars,
-            medals: profile.medals,
-            trophies: profile.trophies,
-            totalMinutesInvested: profile.total_minutes_invested,
-            unlockedIds: profile.unlocked_ids
-          }
-        } as any);
-      }
+      if (goals) {
+        set({ goals: goals as any });
 
-      if (goals) set({ goals: goals as any });
-      if (objectives) set({ objectives: objectives as any });
-      if (projects) set({ projects: projects as any });
-      if (tasks) set({ actionPlans: tasks as any });
-      if (activities) set({ activities: activities as any });
+        if (objectives) {
+          set({ objectives: objectives as any });
+
+          if (projects) {
+            set({ projects: projects as any });
+          }
+
+          if (activities) {
+            set({ activities: activities as any });
+
+            if (tasks) {
+              set({ actionPlans: tasks as any });
+            }
+          }
+        }
+      }
 
     } catch (error) { console.error("Error fetching cloud data:", error); }
   }

@@ -22,13 +22,9 @@ export default function HierarchicalView() {
   // Filtered Data
   const goals = store.goals;
   
-  const currentProjects = useMemo(() => 
-    store.projects.filter(p => p.goalId === selectedGoalId),
-  [store.projects, selectedGoalId]);
-
   const currentObjectives = useMemo(() => 
-    store.objectives.filter(o => o.projectId === selectedProjId),
-  [store.objectives, selectedProjId]);
+    store.objectives.filter(o => o.goalId === selectedGoalId),
+  [store.objectives, selectedGoalId]);
 
   const currentActivities = useMemo(() => 
     store.activities.filter(a => a.objectiveId === selectedObjId),
@@ -36,7 +32,6 @@ export default function HierarchicalView() {
 
   // UI Helpers
   const selectedGoal = goals.find(g => g.id === selectedGoalId);
-  const selectedProj = currentProjects.find(p => p.id === selectedProjId);
   const selectedObj = currentObjectives.find(o => o.id === selectedObjId);
 
   return (
@@ -68,28 +63,8 @@ export default function HierarchicalView() {
             </select>
           </div>
 
-          {/* 2. Project Selector */}
+          {/* 2. Objective Selector */}
           {selectedGoalId && (
-            <div style={cardStyle}>
-              <label style={labelStyle}><Layers size={16} /> Proyecto</label>
-              <select 
-                value={selectedProjId} 
-                onChange={(e) => {
-                  setSelectedProjId(e.target.value);
-                  setSelectedObjId("");
-                }}
-                style={selectStyle}
-              >
-                <option value="">Selecciona Proyecto</option>
-                {currentProjects.map(p => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* 3. Objective Selector */}
-          {selectedProjId && (
             <div style={cardStyle}>
               <label style={labelStyle}><Flag size={16} /> Objetivo</label>
               <select 
@@ -111,7 +86,7 @@ export default function HierarchicalView() {
           {!selectedObjId ? (
             <div style={emptyStateStyle}>
               <ChevronRight size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
-              <p>Selecciona Meta, Proyecto y Objetivo para ver tus Actividades y Tareas</p>
+              <p>Selecciona Meta y Objetivo para ver tus Actividades y Tareas</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

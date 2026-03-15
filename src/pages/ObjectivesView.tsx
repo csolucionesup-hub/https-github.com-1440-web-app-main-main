@@ -17,7 +17,28 @@ export default function ObjectivesView() {
   // Filter state
   const [filterGoalId, setFilterGoalId] = useState<string>("");
 
-  const activeGoals = useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
+  const activeWorkspaceId = useAppStore((state) => state.activeWorkspaceId);
+  const workspaces = useAppStore((state) => state.workspaces);
+  const activeGoals = useMemo(() => {
+    let filtered = goals.filter(g => g.status === 'active' || g.status === 'pending');
+    if (activeWorkspaceId) {
+        const personalWorkspace = workspaces.find(w => w.name === 'Personal');
+        const negociosWorkspace = workspaces.find(w => w.name === 'Negocios');
+
+        filtered = filtered.filter(g => {
+          if (g.workspaceId) return g.workspaceId === activeWorkspaceId;
+          
+          if (activeWorkspaceId === negociosWorkspace?.id) {
+            return g.category === 'Negocio';
+          }
+          if (activeWorkspaceId === personalWorkspace?.id) {
+            return g.category !== 'Negocio';
+          }
+          return false;
+        });
+    }
+    return filtered;
+  }, [goals, activeWorkspaceId, workspaces]);
 
   // Handle default selection and synchronization
   React.useEffect(() => {
@@ -39,13 +60,17 @@ export default function ObjectivesView() {
     [objectives, filterGoalId]
   );
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!name.trim() || !goalId) return;
-    addObjective({
+    const result = await addObjective({
       title: name,
       goalId: goalId,
       period: period
     });
+    if (result && !result.success) {
+      alert(result.message);
+      return;
+    }
     setName("");
   }
 

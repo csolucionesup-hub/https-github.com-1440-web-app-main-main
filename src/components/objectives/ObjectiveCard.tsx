@@ -14,10 +14,10 @@ interface Props {
 export const ObjectiveCard = ({ objective, onEdit, onClick }: Props) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const { updateObjective, removeObjective, projects, activities, workSessions } = useAppStore();
+    const { updateObjective, removeObjective, toggleObjectiveStatus, projects, activities, workSessions, goals } = useAppStore();
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const parentProject = projects.find(p => p.id === objective.projectId);
+    const parentGoal = goals.find(g => g.id === objective.goalId);
     const relatedActivities = activities.filter(a => a.objectiveId === objective.id);
     const stats = getObjectiveStats(objective.id, activities, workSessions);
     const autoProgress = stats.progress;
@@ -32,8 +32,16 @@ export const ObjectiveCard = ({ objective, onEdit, onClick }: Props) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleStatusChange = (newStatus: Objective['status']) => {
-        updateObjective(objective.id, { status: newStatus });
+    const handleStatusChange = async (newStatus: Objective['status']) => {
+        if (newStatus === 'active') {
+            const result = await toggleObjectiveStatus(objective.id);
+            if (result && !result.success) {
+                alert(result.message);
+                return;
+            }
+        } else {
+            updateObjective(objective.id, { status: newStatus });
+        }
         setIsMenuOpen(false);
     };
 
@@ -136,10 +144,10 @@ export const ObjectiveCard = ({ objective, onEdit, onClick }: Props) => {
                 </div>
             </div>
 
-            {parentProject && (
+            {parentGoal && (
                 <div className="flex items-center gap-2 mb-2 text-indigo-400 font-medium text-[10px] uppercase tracking-wider">
                     <LayoutDashboard className="w-3 h-3" />
-                    <span>Proyecto: {parentProject.title}</span>
+                    <span>Meta: {parentGoal.title}</span>
                 </div>
             )}
 

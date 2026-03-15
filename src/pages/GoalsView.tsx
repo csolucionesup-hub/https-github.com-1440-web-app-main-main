@@ -7,7 +7,33 @@ import { CreateGoalModal } from "../components/goals/CreateGoalModal";
 
 export default function GoalsView() {
   const goals = useAppStore((state) => state.goals);
+  const activeWorkspaceId = useAppStore((state) => state.activeWorkspaceId);
   const addGoal = useAppStore((state) => state.addGoal);
+
+  const workspaces = useAppStore((state) => state.workspaces);
+
+  const filteredGoals = useMemo(() => {
+    if (!activeWorkspaceId) return goals;
+    const personalWorkspace = workspaces.find(w => w.name === 'Personal');
+    const negociosWorkspace = workspaces.find(w => w.name === 'Negocios');
+
+    const result = goals.filter(g => {
+      if (g.workspaceId) return g.workspaceId === activeWorkspaceId;
+      
+      // Orphan logic: intelligent mapping by category
+      if (activeWorkspaceId === negociosWorkspace?.id) {
+        return g.category === 'Negocio';
+      }
+      if (activeWorkspaceId === personalWorkspace?.id) {
+        return g.category !== 'Negocio';
+      }
+      
+      return false;
+    });
+
+    // Ensure uniqueness by ID to avoid visual duplicates
+    return Array.from(new Map(result.map(g => [g.id, g])).values());
+  }, [goals, activeWorkspaceId, workspaces]);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Negocio");
@@ -15,21 +41,32 @@ export default function GoalsView() {
   const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
 
   const activeGoals = useMemo(
-    () => goals.filter((goal) => goal.status === "active"),
-    [goals]
+    () => filteredGoals.filter((goal) => goal.status === "active"),
+    [filteredGoals]
+  );
+
+  const bankedGoals = useMemo(
+    () => filteredGoals.filter((goal) => goal.status !== "active"),
+    [filteredGoals]
   );
 
 
-  function handleAddGoal() {
+  async function handleAddGoal() {
     if (!name.trim()) return;
 
-    addGoal({
+    const result = await addGoal({
       title: name.trim(),
       category: category,
       period: 'annual',
       priority: 'medium',
       color: '#06b6d4',
+      workspaceId: activeWorkspaceId || undefined
     });
+
+    if (result && !result.success) {
+      alert(result.message);
+      return;
+    }
 
     setName("");
     setCategory("Negocio");
@@ -84,31 +121,54 @@ export default function GoalsView() {
         </button>
       </div>
 
-      {activeGoals.length === 0 ? (
+      {activeGoals.length === 0 && bankedGoals.length === 0 ? (
         <div className="glass-card premium-border p-12 text-center rounded-3xl">
-          <p className="text-slate-400 text-xl font-medium mb-2">No tienes metas activas.</p>
+          <p className="text-slate-400 text-xl font-medium mb-2">No tienes metas.</p>
           <p className="text-slate-500">Comienza definiendo una meta de Negocio, Salud o lo que sea hoy prioritario.</p>
         </div>
       ) : (
-        <div className="space-y-12">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-              <div className="w-2 h-8 bg-indigo-500 rounded-full"></div>
-              Metas Activas
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {activeGoals.map((goal) => (
-                  <GoalCard 
-                    key={goal.id} 
-                    goal={goal} 
-                    onEdit={() => {
-                      setSelectedGoal(goal);
-                      setIsEditModalOpen(true);
-                    }}
-                  />
-              ))}
+        <div className="space-y-16">
+          {activeGoals.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                <div className="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                Metas Activas
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {activeGoals.map((goal) => (
+                    <GoalCard 
+                      key={goal.id} 
+                      goal={goal} 
+                      onEdit={() => {
+                        setSelectedGoal(goal);
+                        setIsEditModalOpen(true);
+                      }}
+                    />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {bankedGoals.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-bold text-white/80 mb-6 flex items-center gap-3">
+                <div className="w-2 h-8 bg-orange-500/50 rounded-full"></div>
+                Metas en el Banco
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {bankedGoals.map((goal) => (
+                    <GoalCard 
+                      key={goal.id} 
+                      goal={goal} 
+                      onEdit={() => {
+                        setSelectedGoal(goal);
+                        setIsEditModalOpen(true);
+                      }}
+                    />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
       <CreateGoalModal 

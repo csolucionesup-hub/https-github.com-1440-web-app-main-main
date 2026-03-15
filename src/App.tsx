@@ -15,6 +15,8 @@ import SettingsView from "./pages/SettingsView";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { LoginView } from "./pages/LoginView";
 import RewardNotification from "./components/ui/RewardNotification";
+import { useAppStore } from "./store/useAppStore";
+import { performDataCleanup } from "./utils/cleanup";
 
 import FocusMode from "./pages/FocusMode";
 
@@ -45,6 +47,19 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 const AppContent = () => {
   const { user, loading } = useAuth();
+  
+  // Effect to perform data cleanup after hydration
+  React.useEffect(() => {
+    const checkHydration = setInterval(async () => {
+      if (useAppStore.persist?.hasHydrated()) {
+        clearInterval(checkHydration);
+        console.log("🏪 Store hydrated, performing cleanup...");
+        await performDataCleanup();
+      }
+    }, 1000);
+
+    return () => clearInterval(checkHydration);
+  }, []);
 
   if (loading) {
     return (

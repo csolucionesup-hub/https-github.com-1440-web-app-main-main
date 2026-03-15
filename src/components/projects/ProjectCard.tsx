@@ -12,13 +12,13 @@ interface Props {
 }
 
 export const ProjectCard = ({ project, onEdit, onClick }: Props) => {
-    const { goals, objectives, activities, workSessions, removeProject, updateProject } = useAppStore();
+    const { goals, objectives, activities, workSessions, removeProject, updateProject, toggleProjectStatus } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    const parentGoal = goals.find(g => g.id === project.goalId);
-    const relatedObjectives = objectives.filter(o => o.projectId === project.id);
+    const parentObjective = objectives.find(o => o.id === project.objectiveId);
+    const relatedObjectives = objectives.filter(o => o.id === project.objectiveId);
     const stats = getProjectStats(project.id, objectives, activities, workSessions); 
     const autoProgress = stats.progress;
 
@@ -32,8 +32,16 @@ export const ProjectCard = ({ project, onEdit, onClick }: Props) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleStatusChange = (newStatus: Project['status']) => {
-        updateProject(project.id, { status: newStatus });
+    const handleStatusChange = async (newStatus: Project['status']) => {
+        if (newStatus === 'active' || newStatus === 'in_progress') {
+            const result = await toggleProjectStatus(project.id);
+            if (result && !result.success) {
+                alert(result.message);
+                return;
+            }
+        } else {
+            updateProject(project.id, { status: newStatus });
+        }
         setIsMenuOpen(false);
     };
 
@@ -136,10 +144,10 @@ export const ProjectCard = ({ project, onEdit, onClick }: Props) => {
                 </div>
             </div>
 
-            {parentGoal && (
+            {parentObjective && (
                 <div className="flex items-center gap-2 mb-2 text-sky-400 font-medium text-[10px] uppercase tracking-wider">
                     <Target className="w-3 h-3" />
-                    <span>Meta: {parentGoal.title}</span>
+                    <span>Objetivo: {parentObjective.title}</span>
                 </div>
             )}
 

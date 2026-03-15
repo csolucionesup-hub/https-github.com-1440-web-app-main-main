@@ -1,20 +1,19 @@
 import React, { useState } from "react";
 import { useAppStore } from "../store/useAppStore";
 import Card from "../components/ui/Card";
+import { Plus, Trash2, Clock, Edit2 } from "lucide-react";
 
 export default function SettingsView() {
   const { userSettings, updateSettings } = useAppStore();
   const [sleepHours, setSleepHours] = useState(userSettings.sleepMinutes / 60);
-  const [routineHours, setRoutineHours] = useState(userSettings.routineMinutes / 60);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleSave = () => {
     setMessage(null);
     
     const sleepMinutes = Math.round(sleepHours * 60);
-    const routineMinutes = Math.round(routineHours * 60);
 
-    const result = updateSettings({ sleepMinutes, routineMinutes });
+    const result = updateSettings({ sleepMinutes });
 
     if (result.success) {
       setMessage({ type: 'success', text: "Configuración guardada correctamente." });
@@ -23,7 +22,7 @@ export default function SettingsView() {
     }
   };
 
-  const freeTimeMetas = 1440 - (sleepHours * 60) - (routineHours * 60);
+  const freeTimeMetas = 1440 - (sleepHours * 60) - userSettings.routineMinutes;
 
 const MotivationSection = () => {
     const userQuotes = useAppStore((state) => state.userQuotes);
@@ -127,6 +126,140 @@ const MotivationSection = () => {
     );
   };
 
+  const RoutineSection = () => {
+    const { routines } = userSettings;
+    const { addRoutine, updateRoutine, removeRoutine } = useAppStore();
+    const [newName, setNewName] = useState("");
+    const [newMinutes, setNewMinutes] = useState(30);
+
+    const handleAdd = () => {
+      if (!newName.trim()) return;
+      addRoutine(newName.trim(), newMinutes);
+      setNewName("");
+      setNewMinutes(30);
+    };
+
+    return (
+      <Card title="Desglose de Rutina Fija" subtitle="Define actividades no negociables">
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px auto", gap: 10, alignItems: "flex-end" }}>
+            <div>
+              <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Nueva Rutina</label>
+              <input 
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Ej: Meditación morning"
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  color: "white",
+                  outline: "none"
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Minutos</label>
+              <input 
+                type="number"
+                value={newMinutes}
+                onChange={(e) => setNewMinutes(parseInt(e.target.value) || 0)}
+                style={{
+                  width: "100%",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                  color: "white",
+                  outline: "none"
+                }}
+              />
+            </div>
+            <button 
+              onClick={handleAdd}
+              className="glass-card"
+              style={{
+                width: 44,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#4F46E5",
+                border: "none",
+                borderRadius: 12,
+                color: "white",
+                cursor: "pointer"
+              }}
+            >
+              <Plus size={20} />
+            </button>
+          </div>
+
+          <div style={{ height: "1px", background: "rgba(255,255,255,0.05)" }} />
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {routines?.map((r) => (
+              <div 
+                key={r.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "14px 16px",
+                  background: "rgba(255,255,255,0.02)",
+                  borderRadius: 16,
+                  border: "1px solid rgba(255,255,255,0.05)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(79,70,229,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Clock size={16} color="#818CF8" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{r.name}</div>
+                    <div style={{ fontSize: 12, color: "#64748B" }}>{r.minutes} minutos</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button 
+                    onClick={() => {
+                        const newMins = prompt("Nuevos minutos:", r.minutes.toString());
+                        if (newMins !== null) updateRoutine(r.id, { minutes: parseInt(newMins) || 0 });
+                    }}
+                    style={{ background: "none", border: "none", color: "#94A3B8", cursor: "pointer", padding: 8 }}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button 
+                    onClick={() => removeRoutine(r.id)}
+                    style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: 8 }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ 
+            marginTop: 10, 
+            padding: 12, 
+            borderRadius: 12, 
+            background: "rgba(255,255,255,0.02)", 
+            textAlign: "right",
+            fontSize: 13,
+            color: "#94A3B8"
+          }}>
+            Total Rutina: <strong style={{ color: "white" }}>{userSettings.routineMinutes} min</strong> ({Math.floor(userSettings.routineMinutes / 60)}h {userSettings.routineMinutes % 60}m)
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <div
       style={{
@@ -174,20 +307,14 @@ const MotivationSection = () => {
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                  <label style={{ fontSize: 15, fontWeight: 600 }}>Rutina Fija</label>
-                  <span style={{ color: "#4F46E5", fontWeight: 700 }}>{routineHours} h</span>
+                  <label style={{ fontSize: 15, fontWeight: 600 }}>Rutina Fija (Total)</label>
+                  <span style={{ color: "#4F46E5", fontWeight: 700 }}>{userSettings.routineMinutes / 60} h ({userSettings.routineMinutes} min)</span>
                 </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="12" 
-                  step="0.5"
-                  value={routineHours}
-                  onChange={(e) => setRoutineHours(parseFloat(e.target.value))}
-                  style={{ width: "100%", cursor: "pointer" }}
-                />
+                <div style={{ height: 8, background: "rgba(255,255,255,0.05)", borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
+                    <div style={{ width: `${(userSettings.routineMinutes / 720) * 100}%`, height: '100%', background: '#4F46E5' }}></div>
+                </div>
                 <p style={{ fontSize: 13, color: "#94A3B8", marginTop: 8 }}>
-                  Tiempo dedicado a actividades no negociables (comidas, traslados, obligaciones fijas).
+                  Tiempo dedicado a actividades no negociables. ¡Gestiónalo en detalle en la sección de abajo!
                 </p>
               </div>
 
@@ -238,6 +365,8 @@ const MotivationSection = () => {
               </button>
             </div>
           </Card>
+
+          <RoutineSection />
 
           <MotivationSection />
         </div>

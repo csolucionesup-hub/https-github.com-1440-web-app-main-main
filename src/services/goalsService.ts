@@ -22,7 +22,8 @@ export const goalsService = {
         category: goal.category,
         status: goal.status,
         priority: goal.priority,
-        color: goal.color
+        color: goal.color,
+        workspace_id: goal.workspaceId
       })
       .select()
       .single();
@@ -67,7 +68,8 @@ export const goalsService = {
       color: db.color,
       createdAt: db.created_at,
       statusUpdatedAt: db.updated_at,
-      period: 'quarterly', // Defaulting as it's not in DB yet
+      workspaceId: db.workspace_id,
+      period: 'quarterly', 
     };
   }
 };

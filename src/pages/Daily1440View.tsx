@@ -7,16 +7,27 @@ import WeeklyTrendChart from "../components/ui/WeeklyTrendChart";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 import { useAppStore } from "../store/useAppStore";
 import { useShallow } from "zustand/react/shallow";
-import { Star, Award, Trophy } from "lucide-react";
+import { Star, Award, Trophy, TrendingUp } from "lucide-react";
+import { getGoalStats } from "../utils/progressAnalytics";
 
 export default function Daily1440View() {
-  const { userSettings } = useAppStore();
+  const { 
+    userSettings, 
+    achievements, 
+    goals, 
+    projects, 
+    objectives, 
+    activities, 
+    workSessions, 
+    workspaces, 
+    activeWorkspaceId 
+  } = useAppStore();
+
   const { sleepMinutes, routineMinutes } = userSettings;
   const { freeMinutes, plannedMinutes, executedMinutes, alignmentPercent } = useAppStore(
     useShallow((state) => state.getDailyMetrics())
   );
 
-  const achievements = useAppStore((state) => state.achievements);
   const { stars, medals, trophies } = achievements;
 
   const dailyProgress = plannedMinutes > 0 
@@ -106,6 +117,29 @@ export default function Daily1440View() {
             title="Distribución del día"
             subtitle="Cómo se está usando tu tiempo hoy"
           >
+            <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', height: 40, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ width: `${(sleepMinutes/1440)*100}%`, background: '#334155' }} title={`Sueño: ${sleepMinutes}m`}></div>
+                    <div style={{ width: `${(routineMinutes/1440)*100}%`, background: '#475569' }} title={`Rutinas: ${routineMinutes}m`}></div>
+                    <div style={{ width: `${(plannedMinutes/1440)*100}%`, background: '#3b82f6' }} title={`Planeado: ${plannedMinutes}m`}></div>
+                    <div style={{ flex: 1, background: '#1e293b' }} title={`Libre: ${freeMinutes}m`}></div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontSize: 11, color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: '#334155' }}></div> Sueño
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: '#475569' }}></div> Rutina
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: '#3b82f6' }}></div> Metas
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: '#1e293b' }}></div> Libre
+                    </div>
+                </div>
+            </div>
+
             <div
               style={{
                 display: "grid",
@@ -198,10 +232,33 @@ export default function Daily1440View() {
             title="Metas que más están creciendo"
             subtitle="Tiempo ejecutado por enfoque principal"
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <ProgressBar label="Salud" value={72} color="#10B981" />
-              <ProgressBar label="Negocio" value={49} color="#06B6D4" />
-              <ProgressBar label="Espiritual" value={28} color="#8B5CF6" />
+            {/* Metas Proyectadas */}
+            <h3 className="text-white font-bold mb-4 flex items-center gap-2">
+              <TrendingUp size={18} className="text-indigo-400" />
+              Metas que más están creciendo
+            </h3>
+            <div className="space-y-4">
+              {goals
+                .filter(g => 
+                  g.status === 'active' && 
+                  (g.workspaceId === activeWorkspaceId || (!g.workspaceId && activeWorkspaceId === workspaces.find(w => w.name === 'Personal')?.id))
+                )
+                .slice(0, 3)
+                .map(goal => {
+                  const stats = getGoalStats(goal.id, projects, objectives, activities, workSessions);
+                  return (
+                    <ProgressBar 
+                      key={goal.id}
+                      label={goal.title} 
+                      value={stats.progress} 
+                      color={goal.color} 
+                    />
+                  );
+                })}
+              
+              {goals.filter(g => g.status === 'active' && (g.workspaceId === activeWorkspaceId || (!g.workspaceId && activeWorkspaceId === workspaces.find(w => w.name === 'Personal')?.id))).length === 0 && (
+                <p className="text-slate-500 text-sm italic">No hay metas activas en este área.</p>
+              )}
             </div>
           </Card>
 
