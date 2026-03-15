@@ -511,24 +511,24 @@ export const createProductivitySlice: StateCreator<
         tasksService.getActivities()
       ]);
 
-      if (goals) {
+      if (goals && goals.length > 0) {
         set({ goals: goals as any });
+      }
 
-        if (objectives) {
-          set({ objectives: objectives as any });
+      if (objectives && objectives.length > 0) {
+        set({ objectives: objectives as any });
+      }
 
-          if (projects) {
-            set({ projects: projects as any });
-          }
+      if (projects && projects.length > 0) {
+        set({ projects: projects as any });
+      }
 
-          if (activities) {
-            set({ activities: activities as any });
+      if (activities && activities.length > 0) {
+        set({ activities: activities as any });
+      }
 
-            if (tasks) {
-              set({ actionPlans: tasks as any });
-            }
-          }
-        }
+      if (tasks && tasks.length > 0) {
+        set({ actionPlans: tasks as any });
       }
 
     } catch (error) { console.error("Error fetching cloud data:", error); }

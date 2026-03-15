@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { Project, Objective, Goal } from "../types";
 import { ProjectCard } from "../components/projects/ProjectCard";
 import { Plus, FolderKanban } from "lucide-react";
 import { CreateProjectModal } from "../components/projects/CreateProjectModal";
-import { Project, Objective } from "../types";
+import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ProjectsView() {
   const { goals, objectives, projects, addProject } = useAppStore();
@@ -14,7 +15,6 @@ export default function ProjectsView() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
   
-  // Filter state
   // Filter state
   const [filterGoalId, setFilterGoalId] = useState<string>("");
   const [filterObjectiveId, setFilterObjectiveId] = useState<string>("");
@@ -62,19 +62,40 @@ export default function ProjectsView() {
     }
   }, [objectivesForGoal, filterObjectiveId]);
 
+  const filteredProjects = useMemo(() => {
+    // 1. Get filtered goals for the area (already calculated in activeGoals)
+    const goalIdsInArea = new Set(activeGoals.map(g => g.id));
+    
+    // 2. Get objectives for those goals
+    const objectiveIdsInArea = new Set(
+      objectives.filter(o => goalIdsInArea.has(o.goalId)).map(o => o.id)
+    );
+    
+    // 3. Filter projects that belong to those objectives
+    const result = projects.filter(p => objectiveIdsInArea.has(p.objectiveId));
+    
+    return Array.from(new Map(result.map(p => [p.id, p])).values());
+  }, [projects, activeGoals, objectives]);
+
   const activeProjects = useMemo(
-    () => {
-      let filtered = projects.filter((p) => p.status === "active" || p.status === "in_progress" || p.status === "pending");
-      if (filterObjectiveId) {
-        filtered = filtered.filter(p => p.objectiveId === filterObjectiveId);
-      }
-      return filtered;
-    },
-    [projects, filterObjectiveId]
+    () => filteredProjects.filter((p) => p.status === "active" || (p.status as string) === "in_progress"),
+    [filteredProjects]
+  );
+
+  const bankedProjects = useMemo(
+    () => filteredProjects.filter((p) => p.status !== "active" && (p.status as string) !== "in_progress"),
+    [filteredProjects]
   );
 
   async function handleAdd() {
     if (!name.trim() || !objectiveId) return;
+    
+    const relatedProjects = projects.filter(p => p.objectiveId === objectiveId);
+    if (relatedProjects.length >= 6) {
+      alert("Has alcanzado el límite máximo de 6 proyectos para este objetivo. Elimina uno para crear uno nuevo.");
+      return;
+    }
+
     const result = await addProject({
       title: name,
       objectiveId: objectiveId,
@@ -100,6 +121,10 @@ export default function ProjectsView() {
         </div>
         <p className="text-slate-400 text-lg">Gestiona las iniciativas concretas que componen tus objetivos estratégicos.</p>
       </header>
+
+      <div style={{ marginBottom: 40 }}>
+        <MotivationalQuote strategy="random" category="action" />
+      </div>
 
       {/* Add Form */}
       <div className="glass-card premium-border p-8 mb-12 rounded-[24px] flex gap-4 flex-wrap items-end animate-slide-up">
@@ -158,10 +183,26 @@ export default function ProjectsView() {
 
       <div className="flex flex-col gap-6 mb-12 animate-fade-in">
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              setFilterGoalId("");
+              setFilterObjectiveId("");
+            }}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+              !filterGoalId 
+                ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
+                : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
+            }`}
+          >
+            Todos los Proyectos
+          </button>
           {activeGoals.map((goal) => (
             <button
               key={goal.id}
-              onClick={() => setFilterGoalId(goal.id)}
+              onClick={() => {
+                setFilterGoalId(goal.id);
+                setFilterObjectiveId(""); // Reset objective filter when goal changes
+              }}
               className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
                 filterGoalId === goal.id 
                   ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
@@ -175,6 +216,16 @@ export default function ProjectsView() {
 
         {filterGoalId && objectivesForGoal.length > 0 && (
           <div className="flex flex-wrap gap-2 pl-4 border-l-2 border-indigo-500/20 animate-slide-right">
+             <button
+                onClick={() => setFilterObjectiveId("")}
+                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                  !filterObjectiveId 
+                    ? "bg-sky-500/20 border-sky-500 text-sky-400 shadow-lg shadow-sky-900/20" 
+                    : "bg-slate-900/30 border-white/5 text-slate-500 hover:border-white/10 hover:text-slate-400"
+                }`}
+              >
+                Todos los Objetivos de esta Meta
+              </button>
             {objectivesForGoal.map((obj) => (
               <button
                 key={obj.id}
@@ -193,30 +244,60 @@ export default function ProjectsView() {
       </div>
 
       <div className="space-y-16">
-        <section>
-          <h2 className="text-xl font-bold text-white/90 mb-8 flex items-center gap-3">
-             <div className="w-1.5 h-6 bg-sky-500 rounded-full" />
-             Proyectos Activos
-          </h2>
-          {activeProjects.length === 0 ? (
-            <div className="p-12 glass-card premium-border text-center rounded-[24px]">
-              <p className="text-slate-500">No hay proyectos activos para este objetivo.</p>
-            </div>
-          ) : (
+        {activeProjects.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <div className="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+              Proyectos Activos
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {activeProjects.map(proj => (
-                <ProjectCard 
-                  key={proj.id} 
-                  project={proj} 
-                  onEdit={() => {
-                    setSelectedProject(proj);
-                    setIsEditModalOpen(true);
-                  }}
-                />
-              ))}
+              {activeProjects
+                .filter(p => !filterObjectiveId || p.objectiveId === filterObjectiveId)
+                .filter(p => !filterGoalId || objectives.find(o => o.id === p.objectiveId)?.goalId === filterGoalId)
+                .map(proj => (
+                  <ProjectCard 
+                    key={proj.id} 
+                    project={proj} 
+                    onEdit={() => {
+                      setSelectedProject(proj);
+                      setIsEditModalOpen(true);
+                    }}
+                  />
+                ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
+
+        {bankedProjects.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-white/80 mb-6 flex items-center gap-3">
+              <div className="w-2 h-8 bg-orange-500/50 rounded-full"></div>
+              Proyectos en el Banco
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {bankedProjects
+                .filter(p => !filterObjectiveId || p.objectiveId === filterObjectiveId)
+                .filter(p => !filterGoalId || objectives.find(o => o.id === p.objectiveId)?.goalId === filterGoalId)
+                .map(proj => (
+                  <ProjectCard 
+                    key={proj.id} 
+                    project={proj} 
+                    onEdit={() => {
+                      setSelectedProject(proj);
+                      setIsEditModalOpen(true);
+                    }}
+                  />
+                ))}
+            </div>
+          </section>
+        )}
+
+        {activeProjects.length === 0 && bankedProjects.length === 0 && (
+          <div className="p-12 glass-card premium-border text-center rounded-[24px]">
+            <p className="text-slate-400 text-xl font-medium mb-2">No tienes proyectos.</p>
+            <p className="text-slate-500">Comienza definiendo una iniciativa concreta para tus objetivos estratégicos.</p>
+          </div>
+        )}
       </div>
 
       {selectedProject && (

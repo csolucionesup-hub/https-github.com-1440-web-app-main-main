@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from "react";
 import { useAppStore } from "../store/useAppStore";
+import { Goal, Objective } from "../types";
 import { ObjectiveCard } from "../components/objectives/ObjectiveCard";
 import { Plus, Target } from "lucide-react";
 import { CreateObjectiveModal } from "../components/objectives/CreateObjectiveModal";
-import { Objective } from "../types";
+import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ObjectivesView() {
   const { goals, objectives, addObjective } = useAppStore();
@@ -49,19 +50,34 @@ export default function ObjectivesView() {
     }
   }, [activeGoals, filterGoalId]);
 
+  const filteredObjectives = useMemo(() => {
+    // 1. Get filtered goals for the area (already calculated above)
+    const goalIdsInArea = new Set(activeGoals.map(g => g.id));
+    
+    // 2. Filter objectives that belong to those goals
+    const result = objectives.filter(o => goalIdsInArea.has(o.goalId));
+    
+    return Array.from(new Map(result.map(o => [o.id, o])).values());
+  }, [objectives, activeGoals]);
+
   const activeObjectives = useMemo(
-    () => {
-      let filtered = objectives.filter((o) => o.status === "active" || o.status === "in_progress" || o.status === "pending");
-      if (filterGoalId) {
-        filtered = filtered.filter(o => o.goalId === filterGoalId);
-      }
-      return filtered;
-    },
-    [objectives, filterGoalId]
+    () => filteredObjectives.filter((o) => o.status === "active" || (o.status as string) === "in_progress"),
+    [filteredObjectives]
+  );
+
+  const bankedObjectives = useMemo(
+    () => filteredObjectives.filter((o) => o.status !== "active" && (o.status as string) !== "in_progress"),
+    [filteredObjectives]
   );
 
   async function handleAdd() {
     if (!name.trim() || !goalId) return;
+    const relatedObjectives = objectives.filter(o => o.goalId === goalId);
+    if (relatedObjectives.length >= 6) {
+      alert("Has alcanzado el límite máximo de 6 objetivos para esta meta. Elimina uno para crear uno nuevo.");
+      return;
+    }
+
     const result = await addObjective({
       title: name,
       goalId: goalId,
@@ -85,8 +101,12 @@ export default function ObjectivesView() {
             Objetivos
           </h1>
         </div>
-        <p className="text-slate-400 text-lg">Define los hitos estratégicos que desglosarán tus grandes metas.</p>
+        <p className="text-slate-400 text-lg">Gestiona las iniciativas concretas que componen tus objetivos estratégicos.</p>
       </header>
+
+      <div style={{ marginBottom: 40 }}>
+        <MotivationalQuote strategy="random" category="goals" />
+      </div>
 
       {/* Add Form */}
       <div className="glass-card premium-border p-8 mb-12 rounded-[24px] flex gap-4 flex-wrap items-end animate-slide-up">
@@ -143,8 +163,19 @@ export default function ObjectivesView() {
         </button>
       </div>
 
+      {/* Goal Filter (Tabs pattern) */}
       <div className="flex flex-col gap-6 mb-12 animate-fade-in">
         <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setFilterGoalId("")}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+              !filterGoalId 
+                ? "bg-indigo-500/20 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-900/20" 
+                : "bg-slate-900/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-slate-300"
+            }`}
+          >
+            Todos los Objetivos
+          </button>
           {activeGoals.map((goal) => (
             <button
               key={goal.id}
@@ -162,30 +193,58 @@ export default function ObjectivesView() {
       </div>
 
       <div className="space-y-16">
-        <section>
-          <h2 className="text-xl font-bold text-white/90 mb-8 flex items-center gap-3">
-             <div className="w-1.5 h-6 bg-indigo-500 rounded-full" />
-             Objetivos Activos
-          </h2>
-          {activeObjectives.length === 0 ? (
-            <div className="p-12 glass-card premium-border text-center rounded-[24px]">
-              <p className="text-slate-500">No hay objetivos activos en curso.</p>
-            </div>
-          ) : (
+        {activeObjectives.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <div className="w-2 h-8 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+              Objetivos Activos
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {activeObjectives.map(obj => (
-                <ObjectiveCard 
-                  key={obj.id} 
-                  objective={obj} 
-                  onEdit={() => {
-                    setSelectedObjective(obj);
-                    setIsEditModalOpen(true);
-                  }}
-                />
-              ))}
+              {activeObjectives
+                .filter(o => !filterGoalId || o.goalId === filterGoalId)
+                .map(obj => (
+                  <ObjectiveCard 
+                    key={obj.id} 
+                    objective={obj} 
+                    onEdit={() => {
+                      setSelectedObjective(obj);
+                      setIsEditModalOpen(true);
+                    }}
+                  />
+                ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
+
+        {bankedObjectives.length > 0 && (
+          <section>
+            <h2 className="text-2xl font-bold text-white/80 mb-6 flex items-center gap-3">
+              <div className="w-2 h-8 bg-orange-500/50 rounded-full"></div>
+              Objetivos en el Banco
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {bankedObjectives
+                .filter(o => !filterGoalId || o.goalId === filterGoalId)
+                .map(obj => (
+                  <ObjectiveCard 
+                    key={obj.id} 
+                    objective={obj} 
+                    onEdit={() => {
+                      setSelectedObjective(obj);
+                      setIsEditModalOpen(true);
+                    }}
+                  />
+                ))}
+            </div>
+          </section>
+        )}
+
+        {activeObjectives.length === 0 && bankedObjectives.length === 0 && (
+          <div className="p-12 glass-card premium-border text-center rounded-[24px]">
+            <p className="text-slate-400 text-xl font-medium mb-2">No hay objetivos.</p>
+            <p className="text-slate-500">Crea un nuevo objetivo para desglosar tus metas fundamentales.</p>
+          </div>
+        )}
       </div>
 
       {selectedObjective && (
@@ -202,16 +261,3 @@ export default function ObjectivesView() {
     </div>
   );
 }
-
-const iconBtnStyle: React.CSSProperties = {
-  background: "#1e293b",
-  border: "none",
-  color: "#94a3b8",
-  padding: 8,
-  borderRadius: 8,
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  transition: "all 0.2s"
-};

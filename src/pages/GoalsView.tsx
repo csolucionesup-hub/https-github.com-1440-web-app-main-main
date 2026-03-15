@@ -54,6 +54,11 @@ export default function GoalsView() {
   async function handleAddGoal() {
     if (!name.trim()) return;
 
+    if (goals.length >= 6) {
+      alert("Has alcanzado el límite máximo de 6 metas. Elimina o archiva una para crear una nueva.");
+      return;
+    }
+
     const result = await addGoal({
       title: name.trim(),
       category: category,
