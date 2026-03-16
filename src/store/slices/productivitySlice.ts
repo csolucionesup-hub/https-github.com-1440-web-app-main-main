@@ -284,27 +284,21 @@ export const createProductivitySlice: StateCreator<
   },
 
   removeActivity: async (id) => {
-    console.log("Store: removeActivity start for id:", id);
     set((state) => ({
       activities: state.activities.filter((a) => a.id !== id),
       actionPlans: state.actionPlans.filter((t) => t.activityId !== id),
       workSessions: state.workSessions.filter((w) => w.activityId !== id),
     }));
-    console.log("Store: State updated (optimistic removal done)");
 
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       try { 
-        console.log("Store: Attempting cloud deletion via tasksService...");
         await tasksService.deleteActivity(id); 
-        console.log("Store: Cloud deletion successful");
       }
       catch (error) { 
         console.error("Cloud Error (removeActivity):", error); 
-        alert("Error al eliminar la actividad en la nube. Revisa la consola.");
+        alert("Error de sincronización con la nube.");
       }
-    } else {
-      console.log("Store: No session, skipped cloud deletion.");
     }
   },
 

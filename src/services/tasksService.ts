@@ -162,13 +162,8 @@ export const tasksService = {
     return this.mapActivity(data);
   },
   async deleteActivity(id: string) {
-    console.log("tasksService: deleteActivity for id:", id);
     const { error } = await supabase.from('activities').delete().eq('id', id);
-    if (error) {
-      console.error("tasksService: Deletion error:", error);
-      throw error;
-    }
-    console.log("tasksService: Deletion request sent successfully");
+    if (error) throw error;
   },
 
   // Mappers

@@ -26,17 +26,21 @@ export default function ActivitiesView() {
   const [filterObjectiveId, setFilterObjectiveId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const activeGoals = React.useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
+  const activeGoals = goals.filter(g => g.status === 'active' || g.status === 'pending');
   
-  const activeObjectivesForGoal = React.useMemo(() => {
-    if (!goalId) return [];
-    return objectives.filter(o => o.goalId === goalId && (o.status === 'active' || o.status === 'in_progress' || o.status === 'pending'));
-  }, [objectives, goalId]);
+  const activeObjectivesForGoal = goalId 
+    ? objectives.filter(o => o.goalId === goalId && (o.status === 'active' || o.status === 'in_progress' || o.status === 'pending'))
+    : [];
 
-  const activeProjectsForObjective = React.useMemo(() => {
-    if (!objectiveId) return [];
-    return projects.filter(p => p.objectiveId === objectiveId && (p.status === 'active' || p.status === 'in_progress' || p.status === 'pending'));
-  }, [projects, objectiveId]);
+  const activeProjectsForObjective = objectiveId
+    ? projects.filter(p => p.objectiveId === objectiveId && (p.status === 'active' || p.status === 'in_progress' || p.status === 'pending'))
+    : [];
+
+  const availableForMetas = 1440 - sleepMinutes - routineMinutes;
+  const remainingMinutes = availableForMetas - plannedMinutes;
+  
+  // Directly calculate filtered activities for the main list
+  const activeActivities = activities.filter(a => a.status === 'active' || a.status === 'in_progress');
 
   // Default selection logic
   React.useEffect(() => {
@@ -51,20 +55,6 @@ export default function ActivitiesView() {
       setProjectId("");
     }
   }, [activeObjectivesForGoal, objectiveId]);
-
-  React.useEffect(() => {
-    if (activeProjectsForObjective.length > 0 && (!projectId || !activeProjectsForObjective.find(p => p.id === projectId))) {
-      // We don't force select a project, as it's optional
-    }
-  }, [activeProjectsForObjective, projectId]);
-
-  const availableForMetas = 1440 - sleepMinutes - routineMinutes;
-  const remainingMinutes = availableForMetas - plannedMinutes;
-  
-  const activeActivities = React.useMemo(
-    () => activities.filter(a => a.status === 'active' || a.status === 'in_progress'),
-    [activities]
-  );
 
   const handleAdd = async () => {
     setError(null);
@@ -97,6 +87,12 @@ export default function ActivitiesView() {
     const result = await logActivityExecution(id, mins);
     if (!result.success) {
       alert(result.message);
+    }
+  };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm("¿Estás seguro de que quieres eliminar esta actividad?")) {
+      removeActivity(id);
     }
   };
 
@@ -169,7 +165,8 @@ export default function ActivitiesView() {
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "right 12px center",
                       backgroundSize: "16px",
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      colorScheme: "dark"
                     }}
                   >
                     <option value="">Selecciona meta...</option>
@@ -198,7 +195,8 @@ export default function ActivitiesView() {
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "right 12px center",
                       backgroundSize: "16px",
-                      cursor: goalId ? "pointer" : "not-allowed"
+                      cursor: goalId ? "pointer" : "not-allowed",
+                      colorScheme: "dark"
                     }}
                   >
                     <option value="">Selecciona objetivo...</option>
@@ -227,7 +225,8 @@ export default function ActivitiesView() {
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "right 12px center",
                       backgroundSize: "16px",
-                      cursor: objectiveId ? "pointer" : "not-allowed"
+                      cursor: objectiveId ? "pointer" : "not-allowed",
+                      colorScheme: "dark"
                     }}
                   >
                     <option value="">Ningún proyecto (General)</option>
@@ -304,7 +303,8 @@ export default function ActivitiesView() {
                   color: "white",
                   fontSize: 13,
                   outline: "none",
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  colorScheme: "dark"
                 }}
               >
                 <option value="">Todas las Metas</option>
@@ -325,7 +325,8 @@ export default function ActivitiesView() {
                   color: filterGoalId ? "white" : "#475569",
                   fontSize: 13,
                   outline: "none",
-                  cursor: filterGoalId ? "pointer" : "not-allowed"
+                  cursor: filterGoalId ? "pointer" : "not-allowed",
+                  colorScheme: "dark"
                 }}
               >
                 <option value="">Todos los Objetivos</option>
@@ -398,7 +399,12 @@ export default function ActivitiesView() {
                                         </div>
                                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                                           {projActs.map(activity => (
-                                            <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} onDelete={removeActivity} />
+                                            <ActivityItem 
+                                              key={activity.id} 
+                                              activity={activity} 
+                                              onLog={handleLogExecution} 
+                                              onDelete={handleDelete} 
+                                            />
                                           ))}
                                         </div>
                                       </div>
@@ -413,7 +419,12 @@ export default function ActivitiesView() {
                                       </div>
                                       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                                         {objActs.filter(a => !a.projectId).map(activity => (
-                                          <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} onDelete={removeActivity} />
+                                          <ActivityItem 
+                                            key={activity.id} 
+                                            activity={activity} 
+                                            onLog={handleLogExecution} 
+                                            onDelete={handleDelete} 
+                                          />
                                         ))}
                                       </div>
                                     </div>
@@ -429,23 +440,13 @@ export default function ActivitiesView() {
               )}
             </div>
           </div>
-           </div>
+        </div>
       </div>
     </div>
   );
 }
 
 function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id: string, mins: number) => void, onDelete: (id: string) => void }) {
-  const handleDelete = () => {
-    console.log("ActivityItem: Clicked delete for activity:", activity.id);
-    if (confirm(`¿Estás seguro de que quieres eliminar la actividad "${activity.title}"?`)) {
-      console.log("ActivityItem: Confirmed deletion for activity:", activity.id);
-      onDelete(activity.id);
-    } else {
-      console.log("ActivityItem: Deletion cancelled by user");
-    }
-  };
-
   return (
     <div 
       style={{
@@ -494,7 +495,7 @@ function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id
         </button>
         
         <button
-          onClick={handleDelete}
+          onClick={() => onDelete(activity.id)}
           style={{
             background: "rgba(239, 68, 68, 0.1)",
             color: "#EF4444",
