@@ -5,7 +5,15 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, objectives, goals, projects, addActivity, updateActivity, removeActivity, logActivityExecution, userSettings } = useAppStore();
+  const activities = useAppStore(state => state.activities);
+  const objectives = useAppStore(state => state.objectives);
+  const goals = useAppStore(state => state.goals);
+  const projects = useAppStore(state => state.projects);
+  const addActivity = useAppStore(state => state.addActivity);
+  const removeActivity = useAppStore(state => state.removeActivity);
+  const logActivityExecution = useAppStore(state => state.logActivityExecution);
+  const userSettings = useAppStore(state => state.userSettings);
+  
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
@@ -429,8 +437,12 @@ export default function ActivitiesView() {
 
 function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id: string, mins: number) => void, onDelete: (id: string) => void }) {
   const handleDelete = () => {
+    console.log("ActivityItem: Clicked delete for activity:", activity.id);
     if (confirm(`¿Estás seguro de que quieres eliminar la actividad "${activity.title}"?`)) {
+      console.log("ActivityItem: Confirmed deletion for activity:", activity.id);
       onDelete(activity.id);
+    } else {
+      console.log("ActivityItem: Deletion cancelled by user");
     }
   };
 
