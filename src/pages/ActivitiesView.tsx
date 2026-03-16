@@ -5,7 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, objectives, goals, projects, addActivity, logActivityExecution, userSettings } = useAppStore();
+  const { activities, objectives, goals, projects, addActivity, updateActivity, removeActivity, logActivityExecution, userSettings } = useAppStore();
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
@@ -14,6 +14,8 @@ export default function ActivitiesView() {
   const [goalId, setGoalId] = useState("");
   const [objectiveId, setObjectiveId] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [filterGoalId, setFilterGoalId] = useState("");
+  const [filterObjectiveId, setFilterObjectiveId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const activeGoals = React.useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
@@ -267,91 +269,171 @@ export default function ActivitiesView() {
             </Card>
           </div>
 
-          {/* Lista de Actividades Jerárquica */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-            {activeActivities.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: "#64748B", background: "rgba(255,255,255,0.02)", borderRadius: 18, border: "1px dashed rgba(255,255,255,0.1)" }}>
-                No hay actividades planificadas para hoy.
-              </div>
-            ) : (
-              activeGoals.map(goal => {
-                const goalObjectives = objectives.filter(o => o.goalId === goal.id && (o.status === 'active' || o.status === 'in_progress'));
-                const goalActs = activeActivities.filter(a => goalObjectives.find(o => o.id === a.objectiveId));
-                
-                if (goalActs.length === 0) return null;
+          {/* Sección de Lista y Filtros */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {/* Barra de Filtros */}
+            <div style={{ 
+              display: "flex", 
+              gap: 16, 
+              padding: "16px 20px", 
+              background: "rgba(255,255,255,0.03)", 
+              borderRadius: 16, 
+              border: "1px solid rgba(255,255,255,0.06)",
+              alignItems: "center"
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#94A3B8" }}>Filtrar por:</div>
+              <select
+                value={filterGoalId}
+                onChange={(e) => {
+                  setFilterGoalId(e.target.value);
+                  setFilterObjectiveId("");
+                }}
+                style={{
+                  background: "rgba(15, 23, 42, 0.6)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  color: "white",
+                  fontSize: 13,
+                  outline: "none",
+                  cursor: "pointer"
+                }}
+              >
+                <option value="">Todas las Metas</option>
+                {activeGoals.map(g => (
+                  <option key={g.id} value={g.id}>{g.title}</option>
+                ))}
+              </select>
 
-                return (
-                  <div key={goal.id} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 3, background: goal.color || "#4F46E5" }} />
-                      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "white" }}>{goal.title}</h2>
-                    </div>
+              <select
+                value={filterObjectiveId}
+                onChange={(e) => setFilterObjectiveId(e.target.value)}
+                disabled={!filterGoalId}
+                style={{
+                  background: filterGoalId ? "rgba(15, 23, 42, 0.6)" : "rgba(15, 23, 42, 0.2)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                  color: filterGoalId ? "white" : "#475569",
+                  fontSize: 13,
+                  outline: "none",
+                  cursor: filterGoalId ? "pointer" : "not-allowed"
+                }}
+              >
+                <option value="">Todos los Objetivos</option>
+                {objectives.filter(o => o.goalId === filterGoalId).map(obj => (
+                  <option key={obj.id} value={obj.id}>{obj.title}</option>
+                ))}
+              </select>
 
-                    <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 20 }}>
-                      {goalObjectives.map(obj => {
-                        const objProjects = projects.filter(p => p.objectiveId === obj.id && (p.status === 'active' || p.status === 'in_progress' || p.status === 'pending'));
-                        const objActs = activeActivities.filter(a => a.objectiveId === obj.id);
+              {(filterGoalId || filterObjectiveId) && (
+                <button 
+                  onClick={() => { setFilterGoalId(""); setFilterObjectiveId(""); }}
+                  style={{ border: "none", background: "none", color: "#6366F1", fontSize: 13, cursor: "pointer", fontWeight: 600 }}
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </div>
 
-                        if (objActs.length === 0) return null;
+            {/* Lista de Actividades Jerárquica */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+              {activeActivities.length === 0 ? (
+                <div style={{ padding: 40, textAlign: "center", color: "#64748B", background: "rgba(255,255,255,0.02)", borderRadius: 18, border: "1px dashed rgba(255,255,255,0.1)" }}>
+                  No hay actividades planificadas para hoy.
+                </div>
+              ) : (
+                activeGoals
+                  .filter(g => !filterGoalId || g.id === filterGoalId)
+                  .map(goal => {
+                    const goalObjectives = objectives.filter(o => 
+                      o.goalId === goal.id && 
+                      (o.status === 'active' || o.status === 'in_progress') &&
+                      (!filterObjectiveId || o.id === filterObjectiveId)
+                    );
+                    const goalActs = activeActivities.filter(a => goalObjectives.find(o => o.id === a.objectiveId));
+                    
+                    if (goalActs.length === 0) return null;
 
-                        return (
-                          <div key={obj.id} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#4F46E5", textTransform: "uppercase", letterSpacing: "0.05em" }}>Objetivo:</div>
-                              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#CBD5E1" }}>{obj.title}</h3>
-                            </div>
+                    return (
+                      <div key={goal.id} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                          <div style={{ width: 12, height: 12, borderRadius: 3, background: goal.color || "#4F46E5" }} />
+                          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "white" }}>{goal.title}</h2>
+                        </div>
 
-                            <div style={{ paddingLeft: 12, display: "flex", flexDirection: "column", gap: 12 }}>
-                              {/* Proyectos within Objective */}
-                              {objProjects.map(proj => {
-                                const projActs = objActs.filter(a => a.projectId === proj.id);
-                                if (projActs.length === 0) return null;
+                        <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 20 }}>
+                          {goalObjectives.map(obj => {
+                            const objProjects = projects.filter(p => p.objectiveId === obj.id && (p.status === 'active' || p.status === 'in_progress' || p.status === 'pending'));
+                            const objActs = activeActivities.filter(a => a.objectiveId === obj.id);
 
-                                return (
-                                  <div key={proj.id} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                                      <div style={{ fontSize: 10, fontWeight: 800, color: "#10B981", textTransform: "uppercase", background: "rgba(16,185,129,0.1)", padding: "2px 6px", borderRadius: 4 }}>Proyecto</div>
-                                      <div style={{ fontSize: 14, fontWeight: 600, color: "#94A3B8" }}>{proj.title}</div>
-                                    </div>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                      {projActs.map(activity => (
-                                        <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} />
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                            if (objActs.length === 0) return null;
 
-                              {/* Activities directly under Objective (no project) */}
-                              {objActs.filter(a => !a.projectId).length > 0 && (
-                                <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                                    <div style={{ fontSize: 10, fontWeight: 800, color: "#6366F1", textTransform: "uppercase", background: "rgba(99,102,241,0.1)", padding: "2px 6px", borderRadius: 4 }}>General</div>
-                                  </div>
-                                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                    {objActs.filter(a => !a.projectId).map(activity => (
-                                      <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} />
-                                    ))}
-                                  </div>
+                            return (
+                              <div key={obj.id} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 800, color: "#4F46E5", textTransform: "uppercase", letterSpacing: "0.05em", background: "rgba(79,70,229,0.1)", padding: "2px 6px", borderRadius: 4 }}>Objetivo</div>
+                                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#CBD5E1" }}>{obj.title}</h3>
                                 </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+
+                                <div style={{ paddingLeft: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+                                  {/* Proyectos within Objective */}
+                                  {objProjects.map(proj => {
+                                    const projActs = objActs.filter(a => a.projectId === proj.id);
+                                    if (projActs.length === 0) return null;
+
+                                    return (
+                                      <div key={proj.id} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                                          <div style={{ fontSize: 10, fontWeight: 800, color: "#10B981", textTransform: "uppercase", background: "rgba(16,185,129,0.1)", padding: "2px 6px", borderRadius: 4 }}>Proyecto</div>
+                                          <div style={{ fontSize: 14, fontWeight: 600, color: "#94A3B8" }}>{proj.title}</div>
+                                        </div>
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                          {projActs.map(activity => (
+                                            <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} onDelete={removeActivity} />
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+
+                                  {/* Activities directly under Objective (no project) */}
+                                  {objActs.filter(a => !a.projectId).length > 0 && (
+                                    <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                                        <div style={{ fontSize: 10, fontWeight: 800, color: "#6366F1", textTransform: "uppercase", background: "rgba(99,102,241,0.1)", padding: "2px 6px", borderRadius: 4 }}>General</div>
+                                      </div>
+                                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                        {objActs.filter(a => !a.projectId).map(activity => (
+                                          <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} onDelete={removeActivity} />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
           </div>
-        </div>
+           </div>
       </div>
     </div>
   );
 }
 
-function ActivityItem({ activity, onLog }: { activity: any, onLog: (id: string, mins: number) => void }) {
+function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id: string, mins: number) => void, onDelete: (id: string) => void }) {
+  const handleDelete = () => {
+    if (confirm(`¿Estás seguro de que quieres eliminar la actividad "${activity.title}"?`)) {
+      onDelete(activity.id);
+    }
+  };
+
   return (
     <div 
       style={{
@@ -361,10 +443,11 @@ function ActivityItem({ activity, onLog }: { activity: any, onLog: (id: string, 
         border: "1px solid rgba(255,255,255,0.06)",
         display: "flex",
         justifyContent: "space-between",
-        alignItems: "center"
+        alignItems: "center",
+        position: "relative"
       }}
     >
-      <div>
+      <div style={{ flex: 1 }}>
         <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{activity.title}</h3>
         <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
           {activity.minutesSpentToday || 0} / {activity.plannedMinutesPerSession} min ejecutados
@@ -380,22 +463,45 @@ function ActivityItem({ activity, onLog }: { activity: any, onLog: (id: string, 
         </div>
       </div>
       
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
         <button 
           onClick={() => onLog(activity.id, 15)}
           disabled={(activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0)}
           style={{ 
-            padding: "5px 10px", 
+            padding: "5px 12px", 
             fontSize: 11, 
             background: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "rgba(255,255,255,0.03)" : "rgba(16,185,129,0.1)", 
             color: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "#475569" : "#10B981", 
             border: "none", 
             borderRadius: 6, 
-            fontWeight: 600,
+            fontWeight: 700,
             cursor: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "default" : "pointer" 
           }}
         >
           +15m
+        </button>
+        
+        <button
+          onClick={handleDelete}
+          style={{
+            background: "rgba(239, 68, 68, 0.1)",
+            color: "#EF4444",
+            border: "none",
+            borderRadius: 6,
+            width: 28,
+            height: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            transition: "all 0.2s"
+          }}
+          title="Eliminar actividad"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         </button>
       </div>
     </div>
