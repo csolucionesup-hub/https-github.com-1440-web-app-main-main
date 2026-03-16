@@ -1,4 +1,4 @@
-import { Activity, Objective, Project, Goal, WorkSession, Task } from '../types';
+import { Activity, Objective, Project, Goal, WorkSession } from '../types';
 
 export const calculateProgress = (plannedMinutes: number, actualMinutes: number): number => {
     if (plannedMinutes === 0) return 0;
@@ -52,7 +52,4 @@ export const getGoalStats = (goalId: string, projects: Project[], objectives: Ob
     return { planned: totalPlanned, actual: totalActual, progress: calculateProgress(totalPlanned, totalActual) };
 };
 
-// Task (Action Plan) stats if needed, though they are usually just TODOs
-export const getTaskStats = (taskId: string) => {
-    return { progress: 0 }; // Placeholder if needed by old components
-};
+

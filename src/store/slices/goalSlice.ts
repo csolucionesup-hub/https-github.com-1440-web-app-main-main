@@ -103,15 +103,11 @@ export const createGoalSlice: StateCreator<
     const activitiesToRemove = state.activities.filter(a => objectiveIdsToRemove.includes(a.objectiveId));
     const activityIdsToRemove = activitiesToRemove.map(a => a.id);
 
-    const actionPlansToRemove = state.actionPlans.filter(t => activityIdsToRemove.includes(t.activityId));
-    const actionPlanIdsToRemove = actionPlansToRemove.map(t => t.id);
-
     set((state) => ({
       goals: state.goals.filter((g) => g.id !== id),
       objectives: state.objectives.filter((o) => o.goalId !== id),
       projects: state.projects.filter((p) => !objectiveIdsToRemove.includes(p.objectiveId)),
       activities: state.activities.filter((a) => !objectiveIdsToRemove.includes(a.objectiveId)),
-      actionPlans: state.actionPlans.filter((t) => !activityIdsToRemove.includes(t.activityId)),
       workSessions: state.workSessions.filter((w) => !activityIdsToRemove.includes(w.activityId)),
     }));
 

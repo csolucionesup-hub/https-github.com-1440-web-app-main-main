@@ -4,7 +4,6 @@ import { GoalCard } from "../components/goals/GoalCard";
 import { ProjectCard } from "../components/projects/ProjectCard";
 import { ObjectiveCard } from "../components/objectives/ObjectiveCard";
 import { ActivityCard } from "../components/activities/ActivityCard";
-import { TaskCard } from "../components/tasks/TaskCard";
 import { Archive, ChevronRight, LayoutGrid } from "lucide-react";
 import { CreateGoalModal } from "../components/goals/CreateGoalModal";
 import { CreateProjectModal } from "../components/projects/CreateProjectModal";
@@ -15,7 +14,7 @@ import { ConfirmDeleteModal } from "../components/ui/ConfirmDeleteModal";
 
 export default function BankView() {
   const { 
-    goals, projects, objectives, activities, actionPlans, 
+    goals, projects, objectives, activities, 
     activeWorkspaceId, workspaces,
     toggleGoalStatus, toggleObjectiveStatus, toggleProjectStatus, toggleActivityStatus,
     removeGoal, removeObjective, removeProject, removeActivity
@@ -109,11 +108,6 @@ export default function BankView() {
     if (!selectedObjectiveId) return [];
     return activities.filter(a => a.objectiveId === selectedObjectiveId && a.status !== "active" && a.status !== "in_progress" && a.status !== "completed");
   }, [activities, selectedObjectiveId]);
-
-  const displayedTasks = useMemo(() => {
-    if (!selectedActivityId) return [];
-    return actionPlans.filter(t => t.activityId === selectedActivityId && t.status !== "active" && t.status !== "in_progress" && t.status !== "completed");
-  }, [actionPlans, selectedActivityId]);
 
   const breadcrumbs = useMemo(() => {
     const list = [];
@@ -266,7 +260,6 @@ export default function BankView() {
                 <button 
                   onClick={() => {
                     if (crumb.type === 'goal') { setSelectedProjectId(null); setSelectedObjectiveId(null); setSelectedActivityId(null); }
-                    else if (crumb.type === 'project') { setSelectedObjectiveId(null); setSelectedActivityId(null); }
                     else if (crumb.type === 'objective') { setSelectedActivityId(null); }
                   }}
                   className={`px-3 py-1.5 rounded-lg bg-slate-800/40 border border-white/5 text-xs font-semibold whitespace-nowrap transition-colors hover:bg-slate-800 ${crumb.color}`}
@@ -418,30 +411,6 @@ export default function BankView() {
               )}
             </section>
           </div>
-        )}
-
-        {/* Level 5: Tasks */}
-        {selectedActivityId && (
-          <section>
-            <h2 className="text-xl font-bold text-white/90 mb-6 flex items-center gap-3">
-              <div className="w-1.5 h-6 bg-cyan-500 rounded-full" />
-              Tareas del Plan de Acción
-            </h2>
-            {displayedTasks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {displayedTasks.map((task) => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task} 
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="p-12 text-center rounded-3xl bg-white/5 border border-dashed border-white/10 text-slate-500">
-                No hay tareas pausadas para esta actividad.
-              </div>
-            )}
-          </section>
         )}
       </div>
 

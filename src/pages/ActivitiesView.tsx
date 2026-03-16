@@ -39,10 +39,8 @@ export default function ActivitiesView() {
   const availableForMetas = 1440 - sleepMinutes - routineMinutes;
   const remainingMinutes = availableForMetas - plannedMinutes;
   
-  // Directly calculate filtered activities for the main list
   const activeActivities = activities.filter(a => a.status === 'active' || a.status === 'in_progress');
 
-  // Default selection logic
   React.useEffect(() => {
     if (activeGoals.length > 0 && !goalId) {
       setGoalId(activeGoals[0].id);
@@ -90,10 +88,9 @@ export default function ActivitiesView() {
     }
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar esta actividad?")) {
-      removeActivity(id);
-    }
+  const handleDelete = async (id: string, title: string) => {
+    console.log("DELETING:", title);
+    await removeActivity(id);
   };
 
   return (
@@ -121,7 +118,6 @@ export default function ActivitiesView() {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 24 }}>
-          {/* Formulario */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             <Card title="Nueva Actividad" subtitle="Planifica tu tiempo">
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -276,9 +272,7 @@ export default function ActivitiesView() {
             </Card>
           </div>
 
-          {/* Sección de Lista y Filtros */}
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {/* Barra de Filtros */}
             <div style={{ 
               display: "flex", 
               gap: 16, 
@@ -345,7 +339,6 @@ export default function ActivitiesView() {
               )}
             </div>
 
-            {/* Lista de Actividades Jerárquica */}
             <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
               {activeActivities.length === 0 ? (
                 <div style={{ padding: 40, textAlign: "center", color: "#64748B", background: "rgba(255,255,255,0.02)", borderRadius: 18, border: "1px dashed rgba(255,255,255,0.1)" }}>
@@ -386,7 +379,6 @@ export default function ActivitiesView() {
                                 </div>
 
                                 <div style={{ paddingLeft: 12, display: "flex", flexDirection: "column", gap: 12 }}>
-                                  {/* Proyectos within Objective */}
                                   {objProjects.map(proj => {
                                     const projActs = objActs.filter(a => a.projectId === proj.id);
                                     if (projActs.length === 0) return null;
@@ -411,7 +403,6 @@ export default function ActivitiesView() {
                                     );
                                   })}
 
-                                  {/* Activities directly under Objective (no project) */}
                                   {objActs.filter(a => !a.projectId).length > 0 && (
                                     <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
                                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -446,7 +437,9 @@ export default function ActivitiesView() {
   );
 }
 
-function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id: string, mins: number) => void, onDelete: (id: string) => void }) {
+function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id: string, mins: number) => void, onDelete: (id: string, title: string) => void }) {
+  const [isConfirming, setIsConfirming] = useState(false);
+
   return (
     <div 
       style={{
@@ -477,45 +470,65 @@ function ActivityItem({ activity, onLog, onDelete }: { activity: any, onLog: (id
       </div>
       
       <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-        <button 
-          onClick={() => onLog(activity.id, 15)}
-          disabled={(activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0)}
-          style={{ 
-            padding: "5px 12px", 
-            fontSize: 11, 
-            background: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "rgba(255,255,255,0.03)" : "rgba(16,185,129,0.1)", 
-            color: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "#475569" : "#10B981", 
-            border: "none", 
-            borderRadius: 6, 
-            fontWeight: 700,
-            cursor: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "default" : "pointer" 
-          }}
-        >
-          +15m
-        </button>
-        
-        <button
-          onClick={() => onDelete(activity.id)}
-          style={{
-            background: "rgba(239, 68, 68, 0.1)",
-            color: "#EF4444",
-            border: "none",
-            borderRadius: 6,
-            width: 28,
-            height: 28,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all 0.2s"
-          }}
-          title="Eliminar actividad"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        {isConfirming ? (
+          <div style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(239,68,68,0.1)", padding: "4px 8px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)" }}>
+            <span style={{ fontSize: 11, color: "#EF4444", fontWeight: 700 }}>¿Borrar?</span>
+            <button 
+              onClick={() => { onDelete(activity.id, activity.title); setIsConfirming(false); }}
+              style={{ padding: "4px 10px", fontSize: 10, background: "#EF4444", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontWeight: 800 }}
+            >
+              SÍ
+            </button>
+            <button 
+              onClick={() => setIsConfirming(false)}
+              style={{ padding: "4px 10px", fontSize: 10, background: "rgba(255,255,255,0.1)", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontWeight: 700 }}
+            >
+              NO
+            </button>
+          </div>
+        ) : (
+          <>
+            <button 
+              onClick={() => onLog(activity.id, 15)}
+              disabled={(activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0)}
+              style={{ 
+                padding: "5px 12px", 
+                fontSize: 11, 
+                background: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "rgba(255,255,255,0.03)" : "rgba(16,185,129,0.1)", 
+                color: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "#475569" : "#10B981", 
+                border: "none", 
+                borderRadius: 6, 
+                fontWeight: 700,
+                cursor: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "default" : "pointer" 
+              }}
+            >
+              +15m
+            </button>
+            
+            <button
+              onClick={() => setIsConfirming(true)}
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                color: "#EF4444",
+                border: "none",
+                borderRadius: 6,
+                width: 28,
+                height: 28,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+              title="Eliminar actividad"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

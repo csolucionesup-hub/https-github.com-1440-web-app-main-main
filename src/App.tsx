@@ -7,8 +7,6 @@ import GoalsView from "./pages/GoalsView";
 import ProjectsView from "./pages/ProjectsView";
 import ObjectivesView from "./pages/ObjectivesView";
 import ActivitiesView from "./pages/ActivitiesView";
-import HierarchicalView from "./pages/HierarchicalView";
-import TasksView from "./pages/TasksView";
 import AnalyticsView from "./pages/AnalyticsView";
 import BankView from "./pages/BankView";
 import SettingsView from "./pages/SettingsView";
@@ -18,7 +16,6 @@ import RewardNotification from "./components/ui/RewardNotification";
 import { useAppStore } from "./store/useAppStore";
 import { performDataCleanup } from "./utils/cleanup";
 
-import FocusMode from "./pages/FocusMode";
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -78,12 +75,9 @@ const AppContent = () => {
       <AppLayout>
         <Routes>
           <Route path="/" element={<Daily1440View />} />
-          <Route path="/focus" element={<FocusMode />} />
           <Route path="/goals" element={<GoalsView />} />
           <Route path="/projects" element={<ProjectsView />} />
           <Route path="/objectives" element={<ObjectivesView />} />
-          <Route path="/tasks" element={<TasksView />} />
-          <Route path="/explorer" element={<HierarchicalView />} />
           <Route path="/activities" element={<ActivitiesView />} />
           <Route path="/analytics" element={<AnalyticsView />} />
           <Route path="/bank" element={<BankView />} />

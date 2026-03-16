@@ -1,4 +1,4 @@
-import { Goal, Project, Objective, Activity, Task, WorkSession, UserQuote, AchievementState, Workspace } from "../types";
+import { Goal, Project, Objective, Activity, WorkSession, UserQuote, AchievementState, Workspace } from "../types";
 
 export interface GoalSlice {
   goals: Goal[];
@@ -12,7 +12,6 @@ export interface ProductivitySlice {
   projects: Project[];
   objectives: Objective[];
   activities: Activity[];
-  actionPlans: Task[];
   workSessions: WorkSession[];
   userSettings: {
     sleepMinutes: number;
@@ -32,9 +31,6 @@ export interface ProductivitySlice {
   removeActivity: (id: string) => Promise<void>;
   toggleActivityStatus: (id: string) => Promise<void>;
   logActivityExecution: (id: string, minutes: number) => Promise<{ success: boolean; message?: string }>;
-  addActionPlan: (plan: Omit<Task, 'id' | 'createdAt' | 'status' | 'order'>) => Promise<void>;
-  updateActionPlan: (id: string, updates: Partial<Task>) => Promise<void>;
-  removeActionPlan: (id: string) => Promise<void>;
   addWorkSession: (session: WorkSession) => void;
   addRoutine: (name: string, minutes: number) => void;
   updateRoutine: (id: string, updates: Partial<{ name: string; minutes: number }>) => void;

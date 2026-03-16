@@ -4,7 +4,6 @@ import {
   Project, 
   Objective, 
   Activity, 
-  Task, 
   WorkSession, 
   EntityStatus 
 } from "../../types";
@@ -20,7 +19,6 @@ const MAX_TOTAL_PROJECTS_PER_OBJECTIVE = 6;
 const MAX_ACTIVE_OBJECTIVES_PER_GOAL = 3;
 const MAX_TOTAL_OBJECTIVES_PER_GOAL = 6;
 const MAX_ACTIVE_ACTIVITIES = 10;
-const MAX_ACTIVE_ACTION_PLANS = 15;
 
 export const createProductivitySlice: StateCreator<
   AppState,
@@ -31,7 +29,6 @@ export const createProductivitySlice: StateCreator<
   projects: [],
   objectives: [],
   activities: [],
-  actionPlans: [],
   workSessions: [],
   userSettings: {
     sleepMinutes: 480,
@@ -71,7 +68,6 @@ export const createProductivitySlice: StateCreator<
         const dbProject = await tasksService.createProject(newProject, session.user.id, project.objectiveId);
         set((state) => ({
           projects: state.projects.map(p => p.id === tempId ? dbProject : p),
-          actionPlans: state.actionPlans.map(t => t.activityId === tempId ? { ...t, activityId: dbProject.id } : t)
         }));
       } catch (error) { console.error("Cloud Error (addProject):", error); }
     }
@@ -95,7 +91,6 @@ export const createProductivitySlice: StateCreator<
   removeProject: async (id) => {
     set((state) => ({
       projects: state.projects.filter((p) => p.id !== id),
-      actionPlans: state.actionPlans.filter((t) => t.activityId !== id),
     }));
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -180,15 +175,12 @@ export const createProductivitySlice: StateCreator<
   },
 
   removeObjective: async (id) => {
-    const projects = get().projects.filter(p => p.objectiveId === id).map(p => p.id);
     const activities = get().activities.filter(a => a.objectiveId === id).map(a => a.id);
-    const tasks = get().actionPlans.filter(t => activities.includes(t.activityId) || projects.includes(t.activityId)).map(t => t.id);
 
     set((state) => ({
       objectives: state.objectives.filter((o) => o.id !== id),
       projects: state.projects.filter((p) => p.objectiveId !== id),
       activities: state.activities.filter((a) => a.objectiveId !== id),
-      actionPlans: state.actionPlans.filter((t) => !tasks.includes(t.id)),
       workSessions: state.workSessions.filter((w) => !activities.includes(w.activityId)),
     }));
 
@@ -248,7 +240,6 @@ export const createProductivitySlice: StateCreator<
         const dbActivity = await tasksService.createActivity(newActivity, session.user.id, null, newActivity.objectiveId, newActivity.projectId);
         set((state) => ({
           activities: state.activities.map(a => a.id === tempId ? dbActivity : a),
-          actionPlans: state.actionPlans.map(t => t.activityId === tempId ? { ...t, activityId: dbActivity.id } : t)
         }));
       } catch (error) { console.error("Cloud Error (addActivity):", error); }
     }
@@ -284,9 +275,16 @@ export const createProductivitySlice: StateCreator<
   },
 
   removeActivity: async (id) => {
+    const activityToDelete = get().activities.find(a => a.id === id);
+    if (!activityToDelete) return;
+
+    // Save previous state for rollback
+    const previousActivities = get().activities;
+    const previousSessions = get().workSessions;
+
+    // Optimistic UI removal
     set((state) => ({
       activities: state.activities.filter((a) => a.id !== id),
-      actionPlans: state.actionPlans.filter((t) => t.activityId !== id),
       workSessions: state.workSessions.filter((w) => w.activityId !== id),
     }));
 
@@ -295,9 +293,19 @@ export const createProductivitySlice: StateCreator<
       try { 
         await tasksService.deleteActivity(id); 
       }
-      catch (error) { 
-        console.error("Cloud Error (removeActivity):", error); 
-        alert("Error de sincronización con la nube.");
+      catch (error: any) { 
+        console.error("Cloud Error (removeActivity):", error);
+        // Rollback state if backend fails
+        set({ 
+          activities: previousActivities,
+          workSessions: previousSessions
+        });
+        
+        if (error.code === '23503') {
+          alert("No se puede borrar: Esta actividad tiene registros de tiempo o planes asociados. Aplica el script SQL de 'Borrado en Cascada' para solucionar esto.");
+        } else {
+          alert("Error al sincronizar con la nube: La actividad ha vuelto a la lista.");
+        }
       }
     }
   },
@@ -337,56 +345,6 @@ export const createProductivitySlice: StateCreator<
     }
 
     return { success: true };
-  },
-
-  addActionPlan: async (plan) => {
-    const active = get().actionPlans.filter((p) => p.status === "active").length;
-    const tempId = generateId();
-    const newPlan: Task = {
-      ...plan,
-      id: tempId,
-      createdAt: new Date().toISOString(),
-      status: active < MAX_ACTIVE_ACTION_PLANS ? "active" : "pending",
-      order: get().actionPlans.length
-    };
-
-    set((state) => ({ actionPlans: [...state.actionPlans, newPlan] }));
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      try {
-        const dbPlan = await tasksService.createTask(newPlan, session.user.id, plan.activityId);
-        set((state) => ({
-          actionPlans: state.actionPlans.map(t => t.id === tempId ? dbPlan : t)
-        }));
-      } catch (error) { console.error("Cloud Error (addActionPlan):", error); }
-    }
-  },
-
-  updateActionPlan: async (id, updates) => {
-    set((state) => ({
-      actionPlans: state.actionPlans.map((t) =>
-        t.id === id ? { ...t, ...updates, statusUpdatedAt: new Date().toISOString() } : t
-      ),
-    }));
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      try { await tasksService.updateTask(id, updates); }
-      catch (error) { console.error("Cloud Error (updateActionPlan):", error); }
-    }
-  },
-
-  removeActionPlan: async (id) => {
-    set((state) => ({
-      actionPlans: state.actionPlans.filter((t) => t.id !== id),
-    }));
-
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      try { await tasksService.deleteTask(id); }
-      catch (error) { console.error("Cloud Error (removeActionPlan):", error); }
-    }
   },
 
   addWorkSession: (session) => {
@@ -507,12 +465,11 @@ export const createProductivitySlice: StateCreator<
 
   fetchUserCloudData: async (userId) => {
     try {
-      const [profile, goals, objectives, projects, tasks, activities] = await Promise.all([
+      const [profile, goals, objectives, projects, activities] = await Promise.all([
         profilesService.getProfile(userId),
         goalsService.getAll(),
         tasksService.getObjectives(),
         tasksService.getProjects(),
-        tasksService.getTasks(),
         tasksService.getActivities()
       ]);
 
@@ -530,10 +487,6 @@ export const createProductivitySlice: StateCreator<
 
       if (activities && activities.length > 0) {
         set({ activities: activities as any });
-      }
-
-      if (tasks && tasks.length > 0) {
-        set({ actionPlans: tasks as any });
       }
 
     } catch (error) { console.error("Error fetching cloud data:", error); }

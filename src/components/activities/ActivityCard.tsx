@@ -12,13 +12,12 @@ interface Props {
 }
 
 export const ActivityCard = ({ activity, onEdit, onClick }: Props) => {
-    const { updateActivity, removeActivity, objectives, actionPlans, workSessions } = useAppStore();
+    const { updateActivity, removeActivity, objectives, workSessions } = useAppStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     const parentObjective = objectives.find(o => o.id === activity.objectiveId);
-    const relatedTasks = actionPlans.filter(t => t.activityId === activity.id);
     const stats = getActivityStats(activity.id, workSessions);
     const autoProgress = stats.progress;
 
@@ -169,10 +168,6 @@ export const ActivityCard = ({ activity, onEdit, onClick }: Props) => {
 
             <div className="flex items-center gap-6 mt-auto border-t border-white/5 pt-5">
                 <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                    <CalendarDays className="w-4 h-4 text-purple-500/80" />
-                    <span>En {relatedTasks.length} Tareas</span>
-                </div>
-                <div className="flex items-center gap-2 text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <Clock className="w-4 h-4 text-emerald-500/80" />
                     <span>{activity.plannedMinutesPerSession} min/sesión</span>
                 </div>
@@ -183,7 +178,7 @@ export const ActivityCard = ({ activity, onEdit, onClick }: Props) => {
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={() => removeActivity(activity.id)}
                 title="Eliminar Actividad"
-                description={`¿Estás seguro de que deseas eliminar la actividad "${activity.title}" y todas sus tareas de forma permanente?`}
+                description={`¿Estás seguro de que deseas eliminar la actividad "${activity.title}" de forma permanente?`}
             />
         </div>
     );

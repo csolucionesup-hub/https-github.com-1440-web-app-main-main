@@ -1,4 +1,4 @@
-import { Project, Objective, Task, Activity } from '../types';
+import { Project, Objective, Activity } from '../types';
 import { supabase } from '../lib/supabaseClient';
 
 export const tasksService = {
@@ -86,50 +86,7 @@ export const tasksService = {
     if (error) throw error;
   },
 
-  // Tasks (Action Plan)
-  async getTasks() {
-    const { data, error } = await supabase.from('tasks').select('*').order('order_index');
-    if (error) throw error;
-    return data.map(this.mapTask);
-  },
-  async createTask(task: Omit<Task, 'id' | 'createdAt'>, userId: string, activityId: string) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({ 
-        user_id: userId,
-        project_id: activityId, // Reusing project_id slot for activityId
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        period: task.period,
-        order_index: task.order
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    return this.mapTask(data);
-  },
-  async updateTask(id: string, updates: Partial<Task>) {
-    const { data, error } = await supabase
-      .from('tasks')
-      .update({
-        title: updates.title,
-        description: updates.description,
-        status: updates.status,
-        period: updates.period,
-        order_index: updates.order,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return this.mapTask(data);
-  },
-  async deleteTask(id: string) {
-    const { error } = await supabase.from('tasks').delete().eq('id', id);
-    if (error) throw error;
-  },
+
 
   // Activities
   async getActivities() {
@@ -192,19 +149,7 @@ export const tasksService = {
       statusUpdatedAt: db.updated_at
     };
   },
-  mapTask(db: any): Task {
-    return {
-      id: db.id,
-      activityId: db.project_id, // Map DB project_id -> activityId
-      title: db.title,
-      description: db.description,
-      status: db.status,
-      period: db.period || 'daily',
-      order: db.order_index,
-      createdAt: db.created_at,
-      statusUpdatedAt: db.updated_at
-    };
-  },
+
   mapActivity(db: any): Activity {
     return {
       id: db.id,

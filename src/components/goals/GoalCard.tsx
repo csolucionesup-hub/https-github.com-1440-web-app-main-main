@@ -11,7 +11,7 @@ interface GoalCardProps {
 }
 
 export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
-  const { updateGoal, removeGoal, projects, objectives, actionPlans, activities, workSessions } = useAppStore();
+  const { updateGoal, removeGoal, projects, objectives, activities, workSessions } = useAppStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

@@ -6,7 +6,6 @@ import {
   FolderKanban,
   Crosshair,
   Activity,
-  CheckSquare,
   Archive,
   Settings,
   Star,
@@ -14,8 +13,6 @@ import {
   Trophy,
   LogOut,
   BarChart3,
-  Layers,
-  Zap,
 } from "lucide-react";
 import logo1440 from "../../assets/logo-1440.png.jpg";
 import { useAppStore } from "../../store/useAppStore";
@@ -24,13 +21,10 @@ import WorkspaceSelector from "./WorkspaceSelector";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/focus", label: "Modo Enfoque", icon: Zap },
   { to: "/goals", label: "Metas", icon: Target },
   { to: "/objectives", label: "Objetivos", icon: Crosshair },
   { to: "/projects", label: "Proyectos", icon: FolderKanban },
   { to: "/activities", label: "Actividades", icon: Activity },
-  { to: "/tasks", label: "Plan de Acción", icon: CheckSquare },
-  { to: "/explorer", label: "Explorador Estratégico", icon: Layers },
   { to: "/analytics", label: "Estadísticas", icon: BarChart3 },
   { to: "/bank", label: "Banco", icon: Archive },
   { to: "/settings", label: "Configuración", icon: Settings },
