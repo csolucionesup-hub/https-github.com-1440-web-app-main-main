@@ -1,0 +1,78 @@
+src/lib/supabaseClient.ts(3,21): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', or 'nodenext'.
+src/lib/supabaseClient.ts(3,33): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/lib/supabaseClient.ts(4,25): error TS1343: The 'import.meta' meta-property is only allowed when the '--module' option is 'es2020', 'es2022', 'esnext', 'system', 'node16', 'node18', 'node20', or 'nodenext'.
+src/lib/supabaseClient.ts(4,37): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+src/pages/ActivitiesView.tsx(1,8): error TS1259: Module '"C:/Users/Marketing DCC PER\u00DA/Documents/https-github.com-1440-web-app-main-main/node_modules/@types/react/index"' can only be default-imported using the 'esModuleInterop' flag
+src/pages/ActivitiesView.tsx(3,18): error TS6142: Module '../components/ui/Card' was resolved to 'C:/Users/Marketing DCC PER??/Documents/https-github.com-1440-web-app-main-main/src/components/ui/Card.tsx', but '--jsx' is not set.
+src/pages/ActivitiesView.tsx(5,31): error TS6142: Module '../components/ui/MotivationalQuote' was resolved to 'C:/Users/Marketing DCC PER??/Documents/https-github.com-1440-web-app-main-main/src/components/ui/MotivationalQuote.tsx', but '--jsx' is not set.
+src/pages/ActivitiesView.tsx(94,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(102,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(103,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(104,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(107,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(108,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(110,32): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(112,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(113,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(117,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(119,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(120,13): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(121,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(122,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(123,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(124,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(141,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(142,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(143,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(165,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(167,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(172,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(173,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(174,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(194,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(196,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(201,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(202,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(203,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(223,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(225,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(230,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(231,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(232,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(248,27): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(250,17): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(271,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(273,15): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(284,19): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(285,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(286,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(287,23): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(290,21): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(298,27): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(299,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(300,31): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(301,31): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(304,29): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(311,35): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(312,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(313,39): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(314,39): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(316,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(318,41): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(318,55): error TS2322: Type '{ key: any; activity: any; onLog: (id: string, mins: number) => Promise<void>; }' is not assignable to type '{ activity: any; onLog: (id: string, mins: number) => void; }'.
+  Property 'key' does not exist on type '{ activity: any; onLog: (id: string, mins: number) => void; }'.
+src/pages/ActivitiesView.tsx(327,33): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(328,35): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(329,37): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(331,35): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(333,39): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(333,53): error TS2322: Type '{ key: any; activity: any; onLog: (id: string, mins: number) => Promise<void>; }' is not assignable to type '{ activity: any; onLog: (id: string, mins: number) => void; }'.
+  Property 'key' does not exist on type '{ activity: any; onLog: (id: string, mins: number) => void; }'.
+src/pages/ActivitiesView.tsx(356,5): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(367,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(368,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(369,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(372,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(373,11): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(383,7): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+src/pages/ActivitiesView.tsx(384,9): error TS17004: Cannot use JSX unless the '--jsx' flag is provided.

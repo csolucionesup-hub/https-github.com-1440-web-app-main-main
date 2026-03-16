@@ -137,13 +137,14 @@ export const tasksService = {
     if (error) throw error;
     return data.map((a: any) => this.mapActivity(a));
   },
-  async createActivity(activity: Omit<Activity, 'id' | 'createdAt'>, userId: string, taskId: string | null | undefined, objectiveId: string) {
+  async createActivity(activity: Omit<Activity, 'id' | 'createdAt'>, userId: string, taskId: string | null | undefined, objectiveId: string, projectId?: string) {
     const { data, error } = await supabase
       .from('activities')
       .insert({ 
         user_id: userId,
         task_id: taskId || null,
         objective_id: objectiveId,
+        project_id: projectId || null,
         title: activity.title,
         planned_minutes: activity.plannedMinutesPerSession,
         executed_minutes: activity.minutesSpentToday,
@@ -208,6 +209,7 @@ export const tasksService = {
     return {
       id: db.id,
       objectiveId: db.objective_id,
+      projectId: db.project_id,
       title: db.title,
       plannedMinutesPerSession: db.planned_minutes,
       minutesSpentToday: db.executed_minutes,

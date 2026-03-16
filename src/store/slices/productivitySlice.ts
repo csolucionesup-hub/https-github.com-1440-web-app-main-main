@@ -245,7 +245,7 @@ export const createProductivitySlice: StateCreator<
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
       try {
-        const dbActivity = await tasksService.createActivity(newActivity, session.user.id, null, newActivity.objectiveId);
+        const dbActivity = await tasksService.createActivity(newActivity, session.user.id, null, newActivity.objectiveId, newActivity.projectId);
         set((state) => ({
           activities: state.activities.map(a => a.id === tempId ? dbActivity : a),
           actionPlans: state.actionPlans.map(t => t.activityId === tempId ? { ...t, activityId: dbActivity.id } : t)

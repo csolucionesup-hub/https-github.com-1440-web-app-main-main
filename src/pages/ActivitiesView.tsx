@@ -5,7 +5,7 @@ import { useShallow } from "zustand/react/shallow";
 import MotivationalQuote from "../components/ui/MotivationalQuote";
 
 export default function ActivitiesView() {
-  const { activities, objectives, goals, addActivity, logActivityExecution, userSettings } = useAppStore();
+  const { activities, objectives, goals, projects, addActivity, logActivityExecution, userSettings } = useAppStore();
   const { sleepMinutes, routineMinutes } = userSettings;
   const { plannedMinutes } = useAppStore(useShallow((state) => state.getDailyMetrics()));
   
@@ -13,6 +13,7 @@ export default function ActivitiesView() {
   const [newMinutes, setNewMinutes] = useState(30);
   const [goalId, setGoalId] = useState("");
   const [objectiveId, setObjectiveId] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const activeGoals = React.useMemo(() => goals.filter(g => g.status === 'active' || g.status === 'pending'), [goals]);
@@ -21,6 +22,11 @@ export default function ActivitiesView() {
     if (!goalId) return [];
     return objectives.filter(o => o.goalId === goalId && (o.status === 'active' || o.status === 'in_progress' || o.status === 'pending'));
   }, [objectives, goalId]);
+
+  const activeProjectsForObjective = React.useMemo(() => {
+    if (!objectiveId) return [];
+    return projects.filter(p => p.objectiveId === objectiveId && (p.status === 'active' || p.status === 'in_progress' || p.status === 'pending'));
+  }, [projects, objectiveId]);
 
   // Default selection logic
   React.useEffect(() => {
@@ -32,8 +38,15 @@ export default function ActivitiesView() {
   React.useEffect(() => {
     if (activeObjectivesForGoal.length > 0 && (!objectiveId || !activeObjectivesForGoal.find(o => o.id === objectiveId))) {
       setObjectiveId(activeObjectivesForGoal[0].id);
+      setProjectId("");
     }
   }, [activeObjectivesForGoal, objectiveId]);
+
+  React.useEffect(() => {
+    if (activeProjectsForObjective.length > 0 && (!projectId || !activeProjectsForObjective.find(p => p.id === projectId))) {
+      // We don't force select a project, as it's optional
+    }
+  }, [activeProjectsForObjective, projectId]);
 
   const availableForMetas = 1440 - sleepMinutes - routineMinutes;
   const remainingMinutes = availableForMetas - plannedMinutes;
@@ -58,6 +71,7 @@ export default function ActivitiesView() {
       title: newTitle,
       plannedMinutesPerSession: newMinutes,
       objectiveId: objectiveId, 
+      projectId: projectId || undefined,
       period: 'daily',
     });
 
@@ -185,6 +199,35 @@ export default function ActivitiesView() {
                 </div>
 
                 <div>
+                  <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>3. Proyecto (Opcional)</label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    disabled={!objectiveId}
+                    style={{
+                      width: "100%",
+                      background: objectiveId ? "rgba(15, 23, 42, 0.6)" : "rgba(15, 23, 42, 0.3)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 12,
+                      padding: "12px 14px",
+                      color: objectiveId ? "white" : "#475569",
+                      outline: "none",
+                      appearance: "none",
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      backgroundSize: "16px",
+                      cursor: objectiveId ? "pointer" : "not-allowed"
+                    }}
+                  >
+                    <option value="">Ningún proyecto (General)</option>
+                    {activeProjectsForObjective.map(proj => (
+                      <option key={proj.id} value={proj.id}>{proj.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label style={{ display: "block", fontSize: 13, color: "#94A3B8", marginBottom: 6 }}>Minutos planificados</label>
                   <input
                     type="number"
@@ -224,65 +267,136 @@ export default function ActivitiesView() {
             </Card>
           </div>
 
-          {/* Lista de Actividades */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Lista de Actividades Jerárquica */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
             {activeActivities.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center", color: "#64748B", background: "rgba(255,255,255,0.02)", borderRadius: 18, border: "1px dashed rgba(255,255,255,0.1)" }}>
                 No hay actividades planificadas para hoy.
               </div>
             ) : (
-              activeActivities.map((activity) => (
-                <div 
-                  key={activity.id}
-                  style={{
-                    background: "#111827",
-                    borderRadius: 18,
-                    padding: 20,
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}
-                >
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{activity.title}</h3>
-                    <div style={{ fontSize: 13, color: "#94A3B8", marginTop: 4 }}>
-                      {activity.minutesSpentToday || 0} / {activity.plannedMinutesPerSession} min ejecutados
+              activeGoals.map(goal => {
+                const goalObjectives = objectives.filter(o => o.goalId === goal.id && (o.status === 'active' || o.status === 'in_progress'));
+                const goalActs = activeActivities.filter(a => goalObjectives.find(o => o.id === a.objectiveId));
+                
+                if (goalActs.length === 0) return null;
+
+                return (
+                  <div key={goal.id} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div style={{ width: 12, height: 12, borderRadius: 3, background: goal.color || "#4F46E5" }} />
+                      <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "white" }}>{goal.title}</h2>
                     </div>
-                    {/* Barra de progreso mini */}
-                    <div style={{ width: 120, height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
-                      <div 
-                        style={{ 
-                          width: `${Math.min(100, ((activity.minutesSpentToday || 0) / (activity.plannedMinutesPerSession || 1)) * 100)}%`, 
-                          height: "100%", 
-                          background: "#10B981" 
-                        }} 
-                      />
+
+                    <div style={{ paddingLeft: 16, display: "flex", flexDirection: "column", gap: 20 }}>
+                      {goalObjectives.map(obj => {
+                        const objProjects = projects.filter(p => p.objectiveId === obj.id && (p.status === 'active' || p.status === 'in_progress' || p.status === 'pending'));
+                        const objActs = activeActivities.filter(a => a.objectiveId === obj.id);
+
+                        if (objActs.length === 0) return null;
+
+                        return (
+                          <div key={obj.id} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#4F46E5", textTransform: "uppercase", letterSpacing: "0.05em" }}>Objetivo:</div>
+                              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#CBD5E1" }}>{obj.title}</h3>
+                            </div>
+
+                            <div style={{ paddingLeft: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+                              {/* Proyectos within Objective */}
+                              {objProjects.map(proj => {
+                                const projActs = objActs.filter(a => a.projectId === proj.id);
+                                if (projActs.length === 0) return null;
+
+                                return (
+                                  <div key={proj.id} style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                                      <div style={{ fontSize: 10, fontWeight: 800, color: "#10B981", textTransform: "uppercase", background: "rgba(16,185,129,0.1)", padding: "2px 6px", borderRadius: 4 }}>Proyecto</div>
+                                      <div style={{ fontSize: 14, fontWeight: 600, color: "#94A3B8" }}>{proj.title}</div>
+                                    </div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                      {projActs.map(activity => (
+                                        <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} />
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Activities directly under Objective (no project) */}
+                              {objActs.filter(a => !a.projectId).length > 0 && (
+                                <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 16, padding: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 800, color: "#6366F1", textTransform: "uppercase", background: "rgba(99,102,241,0.1)", padding: "2px 6px", borderRadius: 4 }}>General</div>
+                                  </div>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                    {objActs.filter(a => !a.projectId).map(activity => (
+                                      <ActivityItem key={activity.id} activity={activity} onLog={handleLogExecution} />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button 
-                      onClick={() => handleLogExecution(activity.id, 15)}
-                      disabled={(activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0)}
-                      style={{ 
-                        padding: "6px 12px", 
-                        fontSize: 12, 
-                        background: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "rgba(255,255,255,0.05)" : "rgba(16,185,129,0.1)", 
-                        color: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "#475569" : "#10B981", 
-                        border: "none", 
-                        borderRadius: 6, 
-                        cursor: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "default" : "pointer" 
-                      }}
-                    >
-                      +15 min
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityItem({ activity, onLog }: { activity: any, onLog: (id: string, mins: number) => void }) {
+  return (
+    <div 
+      style={{
+        background: "#111827",
+        borderRadius: 14,
+        padding: "14px 18px",
+        border: "1px solid rgba(255,255,255,0.06)",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center"
+      }}
+    >
+      <div>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{activity.title}</h3>
+        <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 4 }}>
+          {activity.minutesSpentToday || 0} / {activity.plannedMinutesPerSession} min ejecutados
+        </div>
+        <div style={{ width: 100, height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, marginTop: 6, overflow: "hidden" }}>
+          <div 
+            style={{ 
+              width: `${Math.min(100, ((activity.minutesSpentToday || 0) / (activity.plannedMinutesPerSession || 1)) * 100)}%`, 
+              height: "100%", 
+              background: "#10B981" 
+            }} 
+          />
+        </div>
+      </div>
+      
+      <div style={{ display: "flex", gap: 8 }}>
+        <button 
+          onClick={() => onLog(activity.id, 15)}
+          disabled={(activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0)}
+          style={{ 
+            padding: "5px 10px", 
+            fontSize: 11, 
+            background: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "rgba(255,255,255,0.03)" : "rgba(16,185,129,0.1)", 
+            color: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "#475569" : "#10B981", 
+            border: "none", 
+            borderRadius: 6, 
+            fontWeight: 600,
+            cursor: (activity.minutesSpentToday || 0) >= (activity.plannedMinutesPerSession || 0) ? "default" : "pointer" 
+          }}
+        >
+          +15m
+        </button>
       </div>
     </div>
   );

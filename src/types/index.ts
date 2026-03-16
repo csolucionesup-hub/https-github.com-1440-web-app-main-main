@@ -98,6 +98,7 @@ export interface Task { // Tactical Task
 export interface Activity {
   id: string;
   objectiveId: string; // Belongs to Objective
+  projectId?: string; // Optional: Belongs to Project
   title: string;
   description?: string;
   period: 'monthly' | 'bimonthly' | 'weekly' | 'daily';
