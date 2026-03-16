@@ -103,20 +103,19 @@ export const ProjectCard = ({ project, onEdit, onClick }: Props) => {
 
                     {isMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-52 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 14 }}>
-                            {project.status !== 'in_progress' && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('in_progress'); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
-                                >
-                                    Poner en Progreso
-                                </button>
-                            )}
-                            {project.status === 'in_progress' && (
+                            {(project.status === 'active' || (project.status as string) === 'in_progress') ? (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('paused'); }}
                                     className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
                                 >
                                     Pausar Proyecto
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('active'); }}
+                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
+                                >
+                                    Activar Proyecto
                                 </button>
                             )}
                             {onEdit && (

@@ -36,6 +36,15 @@
     font-family: var(--font-heading);
     letter-spacing: -0.025em;
   }
+
+  select {
+    color-scheme: dark;
+  }
+
+  option {
+    background-color: #0f172a;
+    color: #f8fafc;
+  }
 }
 
 @layer utilities {

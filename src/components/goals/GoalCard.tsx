@@ -101,20 +101,19 @@ export const GoalCard = ({ goal, onEdit }: GoalCardProps) => {
           {/* Dropdown Menu */}
           {isMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 16 }}>
-              {goal.status !== 'active' && (
-                <button
-                  onClick={() => { handleStatusChange('active'); setIsMenuOpen(false); }}
-                  className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
-                >
-                  Activar Meta
-                </button>
-              )}
-              {goal.status === 'active' && (
+              {(goal.status === 'active' || (goal.status as string) === 'in_progress') ? (
                 <button
                   onClick={() => { handleStatusChange('paused'); setIsMenuOpen(false); }}
                   className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/10 hover:text-amber-300 transition-colors"
                 >
                   Pausar Meta
+                </button>
+              ) : (
+                <button
+                  onClick={() => { handleStatusChange('active'); setIsMenuOpen(false); }}
+                  className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-sky-500/10 hover:text-sky-300 transition-colors"
+                >
+                  Activar Meta
                 </button>
               )}
               {onEdit && (

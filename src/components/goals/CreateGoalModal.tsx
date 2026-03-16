@@ -16,9 +16,9 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
 
     const activeWorkspaceId = useAppStore.getState().activeWorkspaceId;
     const workspaceGoals = goals.filter(g => g.workspaceId === activeWorkspaceId);
-    const activeGoalsCount = workspaceGoals.filter(g => g.status === 'active' && g.id !== goalToEdit?.id).length;
+    const activeGoalsCount = workspaceGoals.filter(g => (g.status === 'active' || (g.status as string) === 'in_progress') && g.id !== goalToEdit?.id).length;
     const isLimitReached = activeGoalsCount >= 3;
-    const isTotalLimitReached = workspaceGoals.length >= 6;
+    const isTotalLimitReached = goals.length >= 6;
 
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -70,6 +70,7 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                 motto,
                 category
             });
+            onClose();
         } else {
             addGoal({
                 title,
@@ -80,10 +81,14 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                 color,
                 motto,
                 workspaceId: activeWorkspaceId || undefined
+            }).then(result => {
+                if (result && !result.success) {
+                    alert(result.message);
+                } else {
+                    onClose();
+                }
             });
         }
-
-        onClose();
     };
 
     return (

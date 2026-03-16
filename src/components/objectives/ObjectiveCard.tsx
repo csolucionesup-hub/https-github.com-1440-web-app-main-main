@@ -103,20 +103,19 @@ export const ObjectiveCard = ({ objective, onEdit, onClick }: Props) => {
 
                     {isMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-52 glass-card premium-border shadow-2xl overflow-hidden z-20 animate-fade-in" style={{ borderRadius: 14 }}>
-                            {objective.status !== 'active' && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('active'); }}
-                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors"
-                                >
-                                    Activar Objetivo
-                                </button>
-                            )}
-                            {objective.status === 'active' && (
+                            {(objective.status === 'active' || (objective.status as string) === 'in_progress') ? (
                                 <button
                                     onClick={(e) => { e.stopPropagation(); handleStatusChange('paused'); }}
                                     className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-amber-500/20 hover:text-amber-300 transition-colors border-b border-white/5"
                                 >
                                     Pausar Objetivo
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleStatusChange('active'); }}
+                                    className="w-full text-left px-4 py-3 text-sm text-slate-300 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors border-b border-white/5"
+                                >
+                                    Activar Objetivo
                                 </button>
                             )}
                             {onEdit && (

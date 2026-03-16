@@ -114,10 +114,10 @@ export default function ActivitiesView() {
                     placeholder="Ej: Lectura técnica"
                     style={{
                       width: "100%",
-                      background: "rgba(255,255,255,0.03)",
+                      background: "rgba(15, 23, 42, 0.6)",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      padding: "10px 12px",
+                      borderRadius: 12,
+                      padding: "12px 14px",
                       color: "white",
                       outline: "none",
                     }}
@@ -134,12 +134,18 @@ export default function ActivitiesView() {
                     }}
                     style={{
                       width: "100%",
-                      background: "rgba(255,255,255,0.03)",
+                      background: "rgba(15, 23, 42, 0.6)",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      padding: "10px 12px",
+                      borderRadius: 12,
+                      padding: "12px 14px",
                       color: "white",
                       outline: "none",
+                      appearance: "none",
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      backgroundSize: "16px",
+                      cursor: "pointer"
                     }}
                   >
                     <option value="">Selecciona meta...</option>
@@ -157,12 +163,18 @@ export default function ActivitiesView() {
                     disabled={!goalId}
                     style={{
                       width: "100%",
-                      background: goalId ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.01)",
+                      background: goalId ? "rgba(15, 23, 42, 0.6)" : "rgba(15, 23, 42, 0.3)",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      padding: "10px 12px",
+                      borderRadius: 12,
+                      padding: "12px 14px",
                       color: goalId ? "white" : "#475569",
                       outline: "none",
+                      appearance: "none",
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "right 12px center",
+                      backgroundSize: "16px",
+                      cursor: goalId ? "pointer" : "not-allowed"
                     }}
                   >
                     <option value="">Selecciona objetivo...</option>
@@ -180,10 +192,10 @@ export default function ActivitiesView() {
                     onChange={(e) => setNewMinutes(parseInt(e.target.value) || 0)}
                     style={{
                       width: "100%",
-                      background: "rgba(255,255,255,0.03)",
+                      background: "rgba(15, 23, 42, 0.6)",
                       border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: 8,
-                      padding: "10px 12px",
+                      borderRadius: 12,
+                      padding: "12px 14px",
                       color: "white",
                       outline: "none",
                     }}
