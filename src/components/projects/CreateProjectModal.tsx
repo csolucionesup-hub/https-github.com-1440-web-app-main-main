@@ -11,13 +11,15 @@ interface Props {
 }
 
 export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit }: Props) => {
-    const { addProject, updateProject, projects, objectives } = useAppStore();
+    const { addProject, updateProject, projects, objectives, goals } = useAppStore();
+    const [selectedGoalId, setSelectedGoalId] = useState('');
     const [selectedObjectiveId, setSelectedObjectiveId] = useState(objectiveId || '');
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [period, setPeriod] = useState<'semester' | 'quarterly' | 'monthly'>('monthly');
 
     // Limits logic (6 total, 3 active)
+    const filteredObjectives = objectives.filter(o => o.goalId === selectedGoalId);
     const relatedProjects = projects.filter(p => p.objectiveId === selectedObjectiveId);
     const relatedActiveCount = relatedProjects.filter(p => (p.status === 'active' || p.status === 'in_progress') && p.id !== projectToEdit?.id).length;
     const isLimitReached = relatedActiveCount >= 3;
@@ -31,15 +33,29 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
             setDescription(projectToEdit.description || '');
             setPeriod(projectToEdit.period);
             setStatus(projectToEdit.status);
+            
+            const obj = objectives.find(o => o.id === projectToEdit.objectiveId);
+            if (obj) {
+                setSelectedGoalId(obj.goalId);
+            }
             setSelectedObjectiveId(projectToEdit.objectiveId);
         } else if (isOpen) {
             setTitle('');
             setDescription('');
             setPeriod('monthly');
             setStatus(isLimitReached ? 'pending' : 'active');
+            
+            if (objectiveId) {
+                const obj = objectives.find(o => o.id === objectiveId);
+                if (obj) {
+                    setSelectedGoalId(obj.goalId);
+                }
+            } else if (goals.length > 0 && !selectedGoalId) {
+                setSelectedGoalId(goals[0].id);
+            }
             setSelectedObjectiveId(objectiveId || '');
         }
-    }, [projectToEdit, isOpen, objectiveId, isLimitReached]);
+    }, [projectToEdit, isOpen, objectiveId, isLimitReached, objectives, goals]);
 
     if (!isOpen) return null;
 
@@ -92,14 +108,32 @@ export const CreateProjectModal = ({ isOpen, onClose, objectiveId, projectToEdit
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
+                        <label className="block text-sm font-semibold text-slate-300 mb-1.5">Meta Fundamental</label>
+                        <select
+                            value={selectedGoalId}
+                            onChange={(e) => {
+                                setSelectedGoalId(e.target.value);
+                                setSelectedObjectiveId('');
+                            }}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
+                        >
+                            <option value="">Selecciona una meta</option>
+                            {goals.map(g => (
+                                <option key={g.id} value={g.id}>{g.title}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
                         <label className="block text-sm font-semibold text-slate-300 mb-1.5">Objetivo Estratégico</label>
                         <select
                             value={selectedObjectiveId}
                             onChange={(e) => setSelectedObjectiveId(e.target.value)}
-                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer"
+                            disabled={!selectedGoalId}
+                            className="w-full bg-slate-900 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="">Selecciona un objetivo</option>
-                            {objectives.map(o => (
+                            {filteredObjectives.map(o => (
                                 <option key={o.id} value={o.id}>{o.title}</option>
                             ))}
                         </select>

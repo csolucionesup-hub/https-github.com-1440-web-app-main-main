@@ -10,6 +10,7 @@ export default function ProjectsView() {
   const { goals, objectives, projects, addProject } = useAppStore();
   
   const [name, setName] = useState("");
+  const [goalIdForCreate, setGoalIdForCreate] = useState("");
   const [objectiveId, setObjectiveId] = useState("");
   const [period, setPeriod] = useState<'monthly' | 'quarterly' | 'semester'>('monthly');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -47,20 +48,33 @@ export default function ProjectsView() {
     return objectives.filter(o => o.goalId === filterGoalId);
   }, [objectives, filterGoalId]);
 
+  const objectivesForCreate = useMemo(() => {
+    if (!goalIdForCreate) return [];
+    return objectives.filter(o => o.goalId === goalIdForCreate);
+  }, [objectives, goalIdForCreate]);
+
   // Handle default selections
   React.useEffect(() => {
     if (activeGoals.length > 0 && !filterGoalId) {
       setFilterGoalId(activeGoals[0].id);
     }
-  }, [activeGoals, filterGoalId]);
+    if (activeGoals.length > 0 && !goalIdForCreate) {
+        setGoalIdForCreate(activeGoals[0].id);
+    }
+  }, [activeGoals, filterGoalId, goalIdForCreate]);
 
   React.useEffect(() => {
     if (objectivesForGoal.length > 0 && (!filterObjectiveId || !objectivesForGoal.find(o => o.id === filterObjectiveId))) {
       const firstId = objectivesForGoal[0].id;
       setFilterObjectiveId(firstId);
-      setObjectiveId(firstId);
     }
   }, [objectivesForGoal, filterObjectiveId]);
+
+  React.useEffect(() => {
+    if (objectivesForCreate.length > 0 && (!objectiveId || !objectivesForCreate.find(o => o.id === objectiveId))) {
+      setObjectiveId(objectivesForCreate[0].id);
+    }
+  }, [objectivesForCreate, objectiveId]);
 
   const filteredProjects = useMemo(() => {
     // 1. Get filtered goals for the area (already calculated in activeGoals)
@@ -142,15 +156,35 @@ export default function ProjectsView() {
 
         <div className="w-full md:w-64">
           <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] mb-3 ml-1">
+            Meta Fundamental
+          </label>
+          <select
+            value={goalIdForCreate}
+            onChange={(e) => {
+                setGoalIdForCreate(e.target.value);
+                setObjectiveId(""); // Reset objective when goal changes
+            }}
+            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-sky-500/50 transition-all cursor-pointer"
+          >
+            <option value="">Selecciona meta</option>
+            {activeGoals.map(g => (
+              <option key={g.id} value={g.id}>{g.title}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="w-full md:w-64">
+          <label className="block text-[10px] font-bold text-sky-400 uppercase tracking-[0.2em] mb-3 ml-1">
             Asociar a Objetivo
           </label>
           <select
             value={objectiveId}
             onChange={(e) => setObjectiveId(e.target.value)}
-            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-sky-500/50 transition-all cursor-pointer"
+            disabled={!goalIdForCreate}
+            className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-5 py-3.5 text-white focus:outline-none focus:border-sky-500/50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">Selecciona un objetivo</option>
-            {objectives.map(o => (
+            {objectivesForCreate.map(o => (
               <option key={o.id} value={o.id}>{o.title}</option>
             ))}
           </select>
