@@ -23,7 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function AnalyticsView() {
   const { user } = useAuth();
-  const { activeWorkspaceId, goals } = useAppStore();
+  const { activeWorkspaceId, goals, objectives, activities, getDailyMetrics } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData>({
     weeklyTrend: [],
@@ -40,18 +40,59 @@ export default function AnalyticsView() {
           analyticsService.getTimeDistributionByCategory(user.id)
         ]);
 
-        // Filter logs by active workspace
+        // Standardize Goal Filter
+        const workspaceId = activeWorkspaceId;
         const workspaceGoalIds = goals
-          .filter(g => g.workspaceId === activeWorkspaceId)
+          .filter(g => {
+            if (g.workspaceId === workspaceId) return true;
+            if (!g.workspaceId) return true; // Show orphaned goals in analytics
+            return false;
+          })
           .map(g => g.id);
 
         const filteredLogs = logs.filter((log: any) => {
-          const goalId = log.activities?.objectives?.goal_id || log.activities?.objectives?.goals?.id;
-          return workspaceGoalIds.includes(goalId);
+          const gId = log.activities?.objectives?.goal_id || log.activities?.objectives?.goals?.id;
+          return workspaceGoalIds.includes(gId);
         });
 
+        let snapshotsToUse = snapshots;
+        let logsToUse = filteredLogs;
+
+        // Fallback to store data if DB is empty for today
+        if (snapshots.length === 0) {
+          const metrics = getDailyMetrics();
+          const today = new Date().toISOString().split('T')[0];
+          snapshotsToUse = [{
+            date: today,
+            total_planned: metrics.plannedMinutes,
+            total_executed: metrics.executedMinutes
+          }];
+        }
+
+        if (filteredLogs.length === 0) {
+          // Construct virtual logs from store activities
+          logsToUse = activities
+            .filter(a => a.minutesSpentToday > 0)
+            .map(a => {
+              const obj = objectives.find(o => o.id === a.objectiveId);
+              const goal = goals.find(g => g.id === obj?.goalId);
+              return {
+                minutes: a.minutesSpentToday,
+                activities: {
+                  title: a.title,
+                  objectives: {
+                    goals: {
+                      category: goal?.category || 'General',
+                      title: goal?.title || 'Sin Meta'
+                    }
+                  }
+                }
+              };
+            });
+        }
+
         // Process Weekly Trend
-        const weekly = snapshots.map((s: any) => ({
+        const weekly = snapshotsToUse.map((s: any) => ({
           day: new Date(s.date).toLocaleDateString('es-ES', { weekday: 'short' }),
           planned: s.total_planned || 0,
           executed: s.total_executed || 0
@@ -59,7 +100,7 @@ export default function AnalyticsView() {
 
         // Process Category Distribution
         const distMap: Record<string, number> = {};
-        filteredLogs.forEach((log: any) => {
+        logsToUse.forEach((log: any) => {
           const cat = log.activities?.objectives?.goals?.category || log.activities?.objectives?.category || "General";
           distMap[cat] = (distMap[cat] || 0) + (log.minutes || 0);
         });
@@ -70,9 +111,8 @@ export default function AnalyticsView() {
           color: CATEGORY_COLORS[category] || CATEGORY_COLORS.General
         })).sort((a, b) => b.minutes - a.minutes);
 
-        // Calculate Efficiency
-        const totalPlanned = snapshots.reduce((acc, s) => acc + (s.total_planned || 0), 0);
-        const totalExecuted = snapshots.reduce((acc, s) => acc + (s.total_executed || 0), 0);
+        const totalPlanned = snapshotsToUse.reduce((acc, s) => acc + (s.total_planned || 0), 0);
+        const totalExecuted = snapshotsToUse.reduce((acc, s) => acc + (s.total_executed || 0), 0);
         const score = totalPlanned > 0 ? Math.round((totalExecuted / totalPlanned) * 100) : 0;
 
         setData({

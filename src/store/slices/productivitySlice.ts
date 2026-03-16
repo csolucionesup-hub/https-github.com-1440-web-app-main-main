@@ -424,11 +424,20 @@ export const createProductivitySlice: StateCreator<
 
   getDailyMetrics: () => {
     const state = get();
-    const activeWorkspaceId = state.activeWorkspaceId;
+    const workspaceId = state.activeWorkspaceId;
+    const activeWorkspace = state.workspaces.find(w => w.id === workspaceId);
+    const isNegocioArea = activeWorkspace?.name === 'Negocios';
     
-    // Get goals belonging to active workspace
+    // Get goals belonging to active workspace OR orphans in this category area
     const workspaceGoalIds = state.goals
-      .filter(g => g.workspaceId === activeWorkspaceId)
+      .filter(g => {
+        if (g.workspaceId === workspaceId) return true;
+        if (!g.workspaceId) {
+          const gIsNegocio = g.category === 'Negocio';
+          return isNegocioArea === gIsNegocio;
+        }
+        return false;
+      })
       .map(g => g.id);
 
     // Get objectives belonging to those goals

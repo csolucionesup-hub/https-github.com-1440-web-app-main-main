@@ -101,7 +101,7 @@ export const tasksService = {
         user_id: userId,
         task_id: taskId || null,
         objective_id: objectiveId,
-        project_id: projectId || null,
+        // project_id: projectId || null,
         title: activity.title,
         planned_minutes: activity.plannedMinutesPerSession,
         executed_minutes: activity.minutesSpentToday,

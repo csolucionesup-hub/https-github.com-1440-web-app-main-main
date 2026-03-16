@@ -22,8 +22,7 @@ export const goalsService = {
         category: goal.category,
         status: goal.status,
         priority: goal.priority,
-        color: goal.color,
-        workspace_id: goal.workspaceId
+        color: goal.color
       })
       .select()
       .single();
