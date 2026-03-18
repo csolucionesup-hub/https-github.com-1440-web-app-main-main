@@ -8,16 +8,17 @@ export const tasksService = {
     if (error) throw error;
     return data.map(this.mapObjective);
   },
-  async createObjective(obj: Omit<Objective, 'id' | 'createdAt'>, userId: string, projectId: string) {
+  async createObjective(obj: Omit<Objective, 'id' | 'createdAt'>, userId: string, goalId: string) {
     const { data, error } = await supabase
       .from('objectives')
       .insert({ 
         user_id: userId,
-        goal_id: projectId, // Reusing goal_id slot for projectId in new hierarchy
+        goal_id: goalId, 
         title: obj.title,
         description: obj.description,
         status: obj.status,
-        order_index: obj.order
+        order_index: obj.order,
+        workspace_id: obj.workspaceId
       })
       .select()
       .single();
@@ -25,13 +26,24 @@ export const tasksService = {
     return this.mapObjective(data);
   },
   async updateObjective(id: string, updates: Partial<Objective>) {
+    const dbUpdates: any = { ...updates };
+    if (updates.order !== undefined) {
+      dbUpdates.order_index = updates.order;
+      delete dbUpdates.order;
+    }
+    if (updates.goalId !== undefined) {
+      dbUpdates.goal_id = updates.goalId;
+      delete dbUpdates.goalId;
+    }
+    if (updates.workspaceId !== undefined) {
+      dbUpdates.workspace_id = updates.workspaceId;
+      delete dbUpdates.workspaceId;
+    }
+
     const { data, error } = await supabase
       .from('objectives')
       .update({
-        title: updates.title,
-        description: updates.description,
-        status: updates.status,
-        order_index: updates.order,
+        ...dbUpdates,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -51,15 +63,16 @@ export const tasksService = {
     if (error) throw error;
     return data.map(this.mapProject);
   },
-  async createProject(proj: Omit<Project, 'id' | 'createdAt'>, userId: string, goalId: string) {
+  async createProject(proj: Omit<Project, 'id' | 'createdAt'>, userId: string, objectiveId: string) {
     const { data, error } = await supabase
       .from('projects')
       .insert({ 
         user_id: userId,
-        objective_id: goalId, // Reusing objective_id slot for goalId in new hierarchy
+        objective_id: objectiveId, 
         title: proj.title,
         status: proj.status,
-        order_index: proj.order
+        order_index: proj.order,
+        workspace_id: proj.workspaceId
       })
       .select()
       .single();
@@ -67,12 +80,24 @@ export const tasksService = {
     return this.mapProject(data);
   },
   async updateProject(id: string, updates: Partial<Project>) {
+    const dbUpdates: any = { ...updates };
+    if (updates.order !== undefined) {
+      dbUpdates.order_index = updates.order;
+      delete dbUpdates.order;
+    }
+    if (updates.objectiveId !== undefined) {
+      dbUpdates.objective_id = updates.objectiveId;
+      delete dbUpdates.objectiveId;
+    }
+    if (updates.workspaceId !== undefined) {
+      dbUpdates.workspace_id = updates.workspaceId;
+      delete dbUpdates.workspaceId;
+    }
+
     const { data, error } = await supabase
       .from('projects')
       .update({
-        title: updates.title,
-        status: updates.status,
-        order_index: updates.order,
+        ...dbUpdates,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -85,8 +110,6 @@ export const tasksService = {
     const { error } = await supabase.from('projects').delete().eq('id', id);
     if (error) throw error;
   },
-
-
 
   // Activities
   async getActivities() {
@@ -101,7 +124,7 @@ export const tasksService = {
         user_id: userId,
         task_id: taskId || null,
         objective_id: objectiveId,
-        // project_id: projectId || null,
+        project_id: projectId || null,
         title: activity.title,
         planned_minutes: activity.plannedMinutesPerSession,
         executed_minutes: activity.minutesSpentToday,
@@ -134,7 +157,8 @@ export const tasksService = {
       order: db.order_index,
       period: db.period || 'monthly',
       createdAt: db.created_at,
-      statusUpdatedAt: db.updated_at
+      statusUpdatedAt: db.updated_at,
+      workspaceId: db.workspace_id
     };
   },
   mapProject(db: any): Project {
@@ -146,7 +170,8 @@ export const tasksService = {
       order: db.order_index,
       period: db.period || 'monthly',
       createdAt: db.created_at,
-      statusUpdatedAt: db.updated_at
+      statusUpdatedAt: db.updated_at,
+      workspaceId: db.workspace_id
     };
   },
 

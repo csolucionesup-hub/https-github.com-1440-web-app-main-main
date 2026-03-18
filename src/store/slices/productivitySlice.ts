@@ -42,21 +42,24 @@ export const createProductivitySlice: StateCreator<
 
   addProject: async (project) => {
     const allInObj = get().projects.filter(p => p.objectiveId === project.objectiveId);
+    const uniqueIds = new Set(allInObj.map(p => p.id));
     
-    // Deduplicate to ignore store pollution
-    const uniqueInObj = Array.from(new Map(allInObj.map(p => [p.id, p])).values());
-    
-    if (uniqueInObj.length >= MAX_TOTAL_PROJECTS_PER_OBJECTIVE) {
+    if (uniqueIds.size >= MAX_TOTAL_PROJECTS_PER_OBJECTIVE) {
       return { success: false, message: `Has alcanzado el límite de ${MAX_TOTAL_PROJECTS_PER_OBJECTIVE} proyectos para este objetivo.` };
     }
 
-    const activeInObj = uniqueInObj.filter(p => (p.status === "active" || (p.status as string) === "in_progress")).length;
+    const activeInObjCount = new Set(allInObj
+      .filter(p => p.status === "active" || (p.status as string) === "in_progress")
+      .map(p => p.id)
+    ).size;
+
     const tempId = generateId();
     const newProject: Project = {
       ...project,
       id: tempId,
+      workspaceId: get().activeWorkspaceId || undefined,
       createdAt: new Date().toISOString(),
-      status: activeInObj < MAX_ACTIVE_PROJECTS_PER_OBJECTIVE ? "active" : "pending",
+      status: activeInObjCount < MAX_ACTIVE_PROJECTS_PER_OBJECTIVE ? "active" : "pending",
       order: get().projects.length
     };
 
@@ -69,7 +72,10 @@ export const createProductivitySlice: StateCreator<
         set((state) => ({
           projects: state.projects.map(p => p.id === tempId ? dbProject : p),
         }));
-      } catch (error) { console.error("Cloud Error (addProject):", error); }
+      } catch (error) { 
+        console.error("Cloud Error (addProject):", error); 
+        // Keep optimistic project
+      }
     }
     return { success: true };
   },
@@ -126,21 +132,24 @@ export const createProductivitySlice: StateCreator<
 
   addObjective: async (objective) => {
     const allInGoal = get().objectives.filter(o => o.goalId === objective.goalId);
+    const uniqueIds = new Set(allInGoal.map(o => o.id));
     
-    // Deduplicate to ignore store pollution
-    const uniqueInGoal = Array.from(new Map(allInGoal.map(o => [o.id, o])).values());
-    
-    if (uniqueInGoal.length >= MAX_TOTAL_OBJECTIVES_PER_GOAL) {
+    if (uniqueIds.size >= MAX_TOTAL_OBJECTIVES_PER_GOAL) {
       return { success: false, message: `Has alcanzado el límite de ${MAX_TOTAL_OBJECTIVES_PER_GOAL} objetivos para esta meta.` };
     }
 
-    const activeInGoal = uniqueInGoal.filter(o => (o.status === "active" || (o.status as string) === "in_progress")).length;
+    const activeInGoalCount = new Set(allInGoal
+      .filter(o => o.status === "active" || (o.status as string) === "in_progress")
+      .map(o => o.id)
+    ).size;
+
     const tempId = generateId();
     const newObjective: Objective = {
       ...objective,
       id: tempId,
+      workspaceId: get().activeWorkspaceId || undefined,
       createdAt: new Date().toISOString(),
-      status: activeInGoal < MAX_ACTIVE_OBJECTIVES_PER_GOAL ? "active" : "pending",
+      status: activeInGoalCount < MAX_ACTIVE_OBJECTIVES_PER_GOAL ? "active" : "pending",
       order: get().objectives.length
     };
 
@@ -155,7 +164,10 @@ export const createProductivitySlice: StateCreator<
           projects: state.projects.map(p => p.objectiveId === tempId ? { ...p, objectiveId: dbObjective.id } : p),
           activities: state.activities.map(a => a.objectiveId === tempId ? { ...a, objectiveId: dbObjective.id } : a)
         }));
-      } catch (error) { console.error("Cloud Error (addObjective):", error); }
+      } catch (error) { 
+        console.error("Cloud Error (addObjective):", error); 
+        // Keep optimistic objective
+      }
     }
     return { success: true };
   },
@@ -482,21 +494,27 @@ export const createProductivitySlice: StateCreator<
         tasksService.getActivities()
       ]);
 
-      if (goals && goals.length > 0) {
-        set({ goals: goals as any });
-      }
-
-      if (objectives && objectives.length > 0) {
-        set({ objectives: objectives as any });
-      }
-
-      if (projects && projects.length > 0) {
-        set({ projects: projects as any });
-      }
-
-      if (activities && activities.length > 0) {
-        set({ activities: activities as any });
-      }
+      set((state) => {
+        const newState: any = {};
+        
+        // Cautious Merge: Cloud data wins for existing IDs or Titles
+        // This helps clean up "temp" local items that failed to sync but are actually in the cloud
+        if (goals && goals.length > 0) {
+          const cloudMap = new Map();
+          goals.forEach(g => {
+            cloudMap.set(g.id, g);
+            cloudMap.set(g.title.toLowerCase(), g);
+          });
+          
+          newState.goals = goals;
+        }
+        
+        if (objectives && objectives.length > 0) newState.objectives = objectives;
+        if (projects && projects.length > 0) newState.projects = projects;
+        if (activities && activities.length > 0) newState.activities = activities;
+        
+        return Object.keys(newState).length > 0 ? newState : state;
+      });
 
     } catch (error) { console.error("Error fetching cloud data:", error); }
   }

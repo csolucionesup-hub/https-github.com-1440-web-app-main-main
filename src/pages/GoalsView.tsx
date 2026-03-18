@@ -37,6 +37,7 @@ export default function GoalsView() {
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Negocio");
+  const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
 
@@ -53,9 +54,11 @@ export default function GoalsView() {
 
   async function handleAddGoal() {
     if (!name.trim()) return;
+    setError(null);
 
-    if (goals.length >= 6) {
-      alert("Has alcanzado el límite máximo de 6 metas. Elimina o archiva una para crear una nueva.");
+    const uniqueGoalsCount = new Set(goals.map(g => g.id)).size;
+    if (uniqueGoalsCount >= 6) {
+      setError("Has alcanzado el límite máximo de 6 metas. Elimina o archiva una para crear una nueva.");
       return;
     }
 
@@ -69,12 +72,13 @@ export default function GoalsView() {
     });
 
     if (result && !result.success) {
-      alert(result.message);
+      setError(result.message || "Error al crear la meta");
       return;
     }
 
     setName("");
     setCategory("Negocio");
+    setError(null);
   }
 
   return (
@@ -124,6 +128,12 @@ export default function GoalsView() {
         >
           Crear Meta Principal
         </button>
+
+        {error && (
+          <div className="w-full mt-2 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm animate-pulse">
+            ⚠️ {error}
+          </div>
+        )}
       </div>
 
       {activeGoals.length === 0 && bankedGoals.length === 0 ? (

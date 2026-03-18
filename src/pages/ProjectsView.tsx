@@ -13,6 +13,7 @@ export default function ProjectsView() {
   const [goalIdForCreate, setGoalIdForCreate] = useState("");
   const [objectiveId, setObjectiveId] = useState("");
   const [period, setPeriod] = useState<'monthly' | 'quarterly' | 'semester'>('monthly');
+  const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | undefined>(undefined);
   
@@ -103,10 +104,12 @@ export default function ProjectsView() {
 
   async function handleAdd() {
     if (!name.trim() || !objectiveId) return;
+    setError(null);
     
     const relatedProjects = projects.filter(p => p.objectiveId === objectiveId);
-    if (relatedProjects.length >= 6) {
-      alert("Has alcanzado el límite máximo de 6 proyectos para este objetivo. Elimina uno para crear uno nuevo.");
+    const uniqueCount = new Set(relatedProjects.map(p => p.id)).size;
+    if (uniqueCount >= 6) {
+      setError("Has alcanzado el límite máximo de 6 proyectos para este objetivo. Elimina uno para crear uno nuevo.");
       return;
     }
 
@@ -116,10 +119,11 @@ export default function ProjectsView() {
       period: period
     });
     if (result && !result.success) {
-      alert(result.message);
+      setError(result.message || "Error al crear el proyecto");
       return;
     }
     setName("");
+    setError(null);
   }
 
   return (
@@ -213,6 +217,12 @@ export default function ProjectsView() {
           <Plus size={20} />
           Agregar
         </button>
+
+        {error && (
+          <div className="w-full mt-2 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm animate-pulse">
+            ⚠️ {error}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-6 mb-12 animate-fade-in">

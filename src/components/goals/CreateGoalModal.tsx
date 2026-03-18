@@ -27,6 +27,7 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
     const [status, setStatus] = useState<EntityStatus>('active');
     const [category, setCategory] = useState('Negocio');
     const [color, setColor] = useState(COLORS[0]);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (goalToEdit) {
@@ -37,6 +38,7 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
             setStatus(goalToEdit.status);
             setColor(goalToEdit.color);
             setCategory(goalToEdit.category || 'Negocio');
+            setError(null);
         } else {
             setTitle('');
             setDescription('');
@@ -45,6 +47,7 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
             setStatus(isLimitReached ? 'pending' : 'active');
             setColor(COLORS[0]);
             setCategory('Negocio');
+            setError(null);
         }
     }, [goalToEdit, isOpen, isLimitReached]);
 
@@ -53,9 +56,10 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!title.trim()) return;
+        setError(null);
 
         if (!goalToEdit && isTotalLimitReached) {
-            alert("Has alcanzado el límite global de 6 metas.");
+            setError("Has alcanzado el límite global de 6 metas.");
             return;
         }
 
@@ -83,7 +87,7 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                 workspaceId: activeWorkspaceId || undefined
             }).then(result => {
                 if (result && !result.success) {
-                    alert(result.message);
+                    setError(result.message || "Error al crear la meta");
                 } else {
                     onClose();
                 }
@@ -102,6 +106,12 @@ export const CreateGoalModal = ({ isOpen, onClose, goalToEdit }: Props) => {
                 </button>
 
                 <h2 className="text-xl font-bold font-heading mb-4">{goalToEdit ? 'Editar Meta' : 'Crear Nueva Meta'}</h2>
+
+                {error && (
+                    <div className="mb-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs animate-pulse">
+                        ⚠️ {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-3">
                     <div>

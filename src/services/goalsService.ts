@@ -22,7 +22,8 @@ export const goalsService = {
         category: goal.category,
         status: goal.status,
         priority: goal.priority,
-        color: goal.color
+        color: goal.color,
+        workspace_id: goal.workspaceId 
       })
       .select()
       .single();
@@ -32,10 +33,20 @@ export const goalsService = {
   },
 
   async update(id: string, updates: Partial<Goal>) {
+    const dbUpdates: any = { ...updates };
+    if (updates.workspaceId !== undefined) {
+      dbUpdates.workspace_id = updates.workspaceId;
+      delete dbUpdates.workspaceId;
+    }
+    if (updates.statusUpdatedAt !== undefined) {
+      dbUpdates.updated_at = updates.statusUpdatedAt;
+      delete dbUpdates.statusUpdatedAt;
+    }
+
     const { data, error } = await supabase
       .from('goals')
       .update({
-        ...updates,
+        ...dbUpdates,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)

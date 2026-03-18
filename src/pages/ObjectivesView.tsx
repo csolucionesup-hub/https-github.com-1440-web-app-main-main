@@ -12,6 +12,7 @@ export default function ObjectivesView() {
   const [name, setName] = useState("");
   const [goalId, setGoalId] = useState("");
   const [period, setPeriod] = useState<'quarterly' | 'monthly' | 'bimonthly'>('monthly');
+  const [error, setError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedObjective, setSelectedObjective] = useState<Objective | undefined>(undefined);
   
@@ -72,9 +73,11 @@ export default function ObjectivesView() {
 
   async function handleAdd() {
     if (!name.trim() || !goalId) return;
+    setError(null);
     const relatedObjectives = objectives.filter(o => o.goalId === goalId);
-    if (relatedObjectives.length >= 6) {
-      alert("Has alcanzado el límite máximo de 6 objetivos para esta meta. Elimina uno para crear uno nuevo.");
+    const uniqueCount = new Set(relatedObjectives.map(o => o.id)).size;
+    if (uniqueCount >= 6) {
+      setError("Has alcanzado el límite máximo de 6 objetivos para esta meta. Elimina uno para crear uno nuevo.");
       return;
     }
 
@@ -84,10 +87,11 @@ export default function ObjectivesView() {
       period: period
     });
     if (result && !result.success) {
-      alert(result.message);
+      setError(result.message || "Error al crear el objetivo");
       return;
     }
     setName("");
+    setError(null);
   }
 
   return (
@@ -161,6 +165,12 @@ export default function ObjectivesView() {
           <Plus size={20} />
           Agregar
         </button>
+
+        {error && (
+          <div className="w-full mt-2 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm animate-pulse">
+            ⚠️ {error}
+          </div>
+        )}
       </div>
 
       {/* Goal Filter (Tabs pattern) */}

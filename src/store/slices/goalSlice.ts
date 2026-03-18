@@ -20,8 +20,15 @@ export const createGoalSlice: StateCreator<
     const activeWorkspaceId = get().activeWorkspaceId;
     const isNegocioArea = goal.category === 'Negocio';
     
-    // Total goals check: Strictly 6 global
-    const totalCount = new Set(get().goals.map(g => g.id)).size;
+    // Total goals check: Strictly 6 unique titles/IDs global
+    const existingGoals = get().goals;
+    const isDuplicate = existingGoals.some(g => g.title.toLowerCase() === goal.title.toLowerCase());
+    
+    if (isDuplicate) {
+      return { success: false, message: "Ya existe una meta con este título." };
+    }
+
+    const totalCount = new Set(existingGoals.map(g => g.id)).size;
     if (totalCount >= MAX_TOTAL_GOALS) {
       return { success: false, message: `Has alcanzado el límite global de ${MAX_TOTAL_GOALS} metas.` };
     }
@@ -56,6 +63,7 @@ export const createGoalSlice: StateCreator<
       color: goal.color || '#06b6d4',
     };
 
+    // Optimistic update
     set((state) => ({
       goals: [...state.goals, newGoal],
     }));
@@ -70,6 +78,8 @@ export const createGoalSlice: StateCreator<
         }));
       } catch (error) {
         console.error("Cloud Error (addGoal):", error);
+        // We keep the optimistic goal in the store even if sync fails,
+        // so it's not lost immediately in the UI.
       }
     }
     return { success: true };

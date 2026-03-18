@@ -63,6 +63,7 @@ export interface Objective {
   order: number;
   completedAt?: string;
   createdAt: string;
+  workspaceId?: string;
 }
 
 export interface Project {
@@ -78,6 +79,7 @@ export interface Project {
   order: number;
   completedAt?: string;
   createdAt: string;
+  workspaceId?: string;
 }
 
 export interface Task { // Tactical Task

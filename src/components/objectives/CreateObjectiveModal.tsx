@@ -23,6 +23,7 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
     const [description, setDescription] = useState('');
     const [period, setPeriod] = useState<'quarterly' | 'bimonthly' | 'monthly'>('monthly');
     const [status, setStatus] = useState<EntityStatus>(isLimitReached ? 'pending' : 'active');
+    const [error, setError] = useState<string | null>(null);
 
     React.useEffect(() => {
         if (objectiveToEdit && isOpen) {
@@ -37,6 +38,7 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
             setPeriod('monthly');
             setStatus(isLimitReached ? 'pending' : 'active');
             setSelectedGoalId(goalId || '');
+            setError(null);
         }
     }, [objectiveToEdit, isOpen, goalId]);
 
@@ -46,9 +48,10 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
         e.preventDefault();
         const finalGoalId = selectedGoalId || goalId;
         if (!title.trim() || !finalGoalId) return;
+        setError(null);
 
         if (!objectiveToEdit && isTotalLimitReached) {
-            alert("Has alcanzado el límite de 6 objetivos para esta meta.");
+            setError("Has alcanzado el límite de 6 objetivos para esta meta.");
             return;
         }
 
@@ -68,7 +71,7 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
                     period,
                 });
                 if (result && !result.success) {
-                    alert(result.message);
+                    setError(result.message || "Error al crear el objetivo");
                     return;
                 }
             onClose();
@@ -88,6 +91,12 @@ export const CreateObjectiveModal = ({ isOpen, onClose, goalId, objectiveToEdit 
                 <h2 className="text-xl font-bold font-heading mb-6">
                     {objectiveToEdit ? 'Editar Objetivo' : 'Crear Nuevo Objetivo'}
                 </h2>
+
+                {error && (
+                    <div className="mb-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs animate-pulse">
+                        ⚠️ {error}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
