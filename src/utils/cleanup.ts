@@ -1,4 +1,6 @@
 import { useAppStore } from "../store/useAppStore";
+import { workspaceService } from "../services/workspaceService";
+import { supabase } from "../lib/supabaseClient";
 
 const names = ['Personal', 'Negocios'];
 
@@ -44,16 +46,33 @@ export const performDataCleanup = async () => {
     }
   }
 
-  // 1.5 Migrate orphaned goals to Personal workspace
-  const personalWorkspace = workspacesToKeep.find(w => w.name === 'Personal');
-  if (personalWorkspace) {
-    state.goals.forEach(goal => {
-      if (!goal.workspaceId) {
-        console.log(`📌 [Migration] Assigning goal "${goal.title}" to Personal workspace`);
-        state.updateGoal(goal.id, { workspaceId: personalWorkspace.id });
+  // 2. Sync Workspaces to Cloud
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    for (const name of names) {
+      try {
+        const local = allWorkspaces.find(w => w.name === name);
+        const defaults = local ? { color: local.color, description: local.description } : {};
+        const cloud = await workspaceService.createOrGetByName(name, session.user.id, defaults);
+        
+        // If local doesn't match cloud ID, update local state
+        if (local && local.id !== cloud.id) {
+          console.log(`🔄 [Sync] Mapping local workspace "${name}" to cloud ID: ${cloud.id}`);
+          useAppStore.setState(s => ({
+            workspaces: s.workspaces.map(w => w.id === local.id ? cloud : w),
+            activeWorkspaceId: s.activeWorkspaceId === local.id ? cloud.id : s.activeWorkspaceId,
+            goals: s.goals.map(g => g.workspaceId === local.id ? { ...g, workspaceId: cloud.id } : g),
+          }));
+        } else if (!local) {
+            // Local missing but Cloud exists or was just created
+            console.log(`➕ [Sync] Adding cloud workspace "${name}" to local state`);
+            useAppStore.setState(s => ({ workspaces: [...s.workspaces, cloud] }));
+        }
+      } catch (e) {
+        console.error(`❌ [Sync] Error syncing workspace "${name}":`, e);
       }
-    });
+    }
   }
 
-  console.log("✨ Cleanup finished (preserved all user goals).");
+  console.log("✨ Cleanup and sync finished.");
 };

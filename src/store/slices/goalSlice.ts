@@ -76,10 +76,11 @@ export const createGoalSlice: StateCreator<
           goals: state.goals.map(g => g.id === tempId ? dbGoal : g),
           objectives: state.objectives.map(o => o.goalId === tempId ? { ...o, goalId: dbGoal.id } : o)
         }));
-      } catch (error) {
-        console.error("Cloud Error (addGoal):", error);
-        // We keep the optimistic goal in the store even if sync fails,
-        // so it's not lost immediately in the UI.
+      } catch (error: any) {
+        console.error("❌ Error creando meta en Supabase:", error);
+        if (error.message) console.error("Detalle:", error.message);
+        if (error.code) console.error("Código de error:", error.code);
+        // Mantenemos la meta en local para que el usuario no pierda el trabajo
       }
     }
     return { success: true };

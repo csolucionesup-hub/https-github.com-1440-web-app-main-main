@@ -7,9 +7,10 @@ import {
   WorkSession, 
   EntityStatus 
 } from "../../types";
-import { tasksService } from "../../services/tasksService";
 import { goalsService } from "../../services/goalsService";
+import { tasksService } from "../../services/tasksService";
 import { profilesService } from "../../services/profilesService";
+import { workspaceService } from "../../services/workspaceService";
 import { analyticsService } from "../../services/analyticsService";
 import { supabase } from "../../lib/supabaseClient";
 import { generateId } from "../../utils/uuid";
@@ -486,36 +487,56 @@ export const createProductivitySlice: StateCreator<
 
   fetchUserCloudData: async (userId) => {
     try {
-      const [profile, goals, objectives, projects, activities] = await Promise.all([
+      const [profile, goals, objectives, projects, activities, cloudWorkspaces] = await Promise.all([
         profilesService.getProfile(userId),
         goalsService.getAll(),
         tasksService.getObjectives(),
         tasksService.getProjects(),
-        tasksService.getActivities()
+        tasksService.getActivities(),
+        workspaceService.getAll().catch(() => [])
       ]);
 
       set((state) => {
         const newState: any = {};
-        
-        // Cautious Merge: Cloud data wins for existing IDs or Titles
-        // This helps clean up "temp" local items that failed to sync but are actually in the cloud
-        if (goals && goals.length > 0) {
-          const cloudMap = new Map();
-          goals.forEach(g => {
-            cloudMap.set(g.id, g);
-            cloudMap.set(g.title.toLowerCase(), g);
-          });
-          
-          newState.goals = goals;
+
+        // 0. Merge Workspaces
+        if (cloudWorkspaces && cloudWorkspaces.length > 0) {
+          const cloudIds = new Set(cloudWorkspaces.map(w => w.id));
+          const localOnly = state.workspaces.filter(w => !cloudIds.has(w.id));
+          newState.workspaces = [...cloudWorkspaces, ...localOnly];
+        }
+        if (goals) {
+          const cloudIds = new Set(goals.map(g => g.id));
+          const localOnly = state.goals.filter(g => !cloudIds.has(g.id));
+          newState.goals = [...goals, ...localOnly];
         }
         
-        if (objectives && objectives.length > 0) newState.objectives = objectives;
-        if (projects && projects.length > 0) newState.projects = projects;
-        if (activities && activities.length > 0) newState.activities = activities;
+        // 2. Merge Objectives
+        if (objectives) {
+          const cloudIds = new Set(objectives.map(o => o.id));
+          const localOnly = state.objectives.filter(o => !cloudIds.has(o.id));
+          newState.objectives = [...objectives, ...localOnly];
+        }
+
+        // 3. Merge Projects
+        if (projects) {
+          const cloudIds = new Set(projects.map(p => p.id));
+          const localOnly = state.projects.filter(p => !cloudIds.has(p.id));
+          newState.projects = [...projects, ...localOnly];
+        }
+
+        // 4. Merge Activities
+        if (activities) {
+          const cloudIds = new Set(activities.map(a => a.id));
+          const localOnly = state.activities.filter(a => !cloudIds.has(a.id));
+          newState.activities = [...activities, ...localOnly];
+        }
         
         return Object.keys(newState).length > 0 ? newState : state;
       });
 
-    } catch (error) { console.error("Error fetching cloud data:", error); }
+    } catch (error) { 
+      console.error("❌ Cloud Sync Error:", error); 
+    }
   }
 });
